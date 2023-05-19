@@ -9,73 +9,47 @@ class GenshinVoice(object):
         self.path = git_path
         self.lang = lang
         self.vo_lang = self.get_vo_lang()
+        self.textmap = dict(self.input_json(
+            f"./TextMap/TextMap{self.lang}.json"
+        ))
 
     def main(self):
         # 变量申明
-        readable_index = dict()
+        fetter_index = dict()
+        dialog_index = dict()
 
         # 解包素材加载
-        lut_path = os.path.join(self.path, './BinOutput/Voice/Lut/Lut.json')
-        textmap_path = os.path.join(self.path, f"./TextMap/TextMap{lang}.json")
-        with open(lut_path, encoding="utf-8") as f:
-            lut_dict = json.load(f)
-        with open(textmap_path, encoding="utf-8") as f:
-            textmap_dict = json.load(f)
+        lut_dict = dict(self.input_json(
+            './BinOutput/Voice/Lut/Lut.json'
+        ))
 
         # 主要角色 ID 索引
         avatar_dict = self.create_avatar_index()
+        npc_dict = self.create_npc_index(avatar_dict)
 
         # 语音分类解析
         for k, v in dict(lut_dict).items():
-            if v['GameTrigger'] == 'Fetter':
-                readable_index[str(k)] = {
-                    "itemFileID": int(v['fileID']),
-                    "voiceType": "Fetter",
-                    "gameTriggerArgs": int(v['gameTriggerArgs'])
-                }
-        self.create_fetter_index(textmap_dict, avatar_dict, readable_index)
+            if v.get('gameTriggerArgs'):
+                self.lut_type_sorting(k, v, 'Fetter', fetter_index)
+                self.lut_type_sorting(k, v, 'Dialog', dialog_index)
 
+        self.create_fetter_index(avatar_dict, fetter_index)
+        self.create_dialog_index(npc_dict, dialog_index)
+        # python 3.9+ feature
+        master_index = fetter_index | dialog_index
+        self.output_json("output.json", master_index)
 
-        return readable_index
+        return
 
-    def create_fetter_index(self, textmap: dict, avatar: dict, data: dict):
+    def create_fetter_index(self, avatar: dict, data: dict):
         item_index = dict()
         fetter_index = defaultdict(list)
 
-        fetters_config_path = os.path.join(
-            self.path,
+        self.from_lut_index_item(data, item_index)
+
+        fetters_config_list = self.input_json(
             './ExcelBinOutput/FettersExcelConfigData.json'
         )
-        with open(fetters_config_path, encoding="utf-8") as f:
-            fetters_config_list = json.load(f)
-
-        # 根据 Lut.json 索引读取 Item Files，其中包含 sourceFileName
-        for k, v in data.items():
-            item_path = os.path.join(
-                self.path,
-                f"./BinOutput/Voice/Items/{v.get('itemFileID')}.json"
-            )
-            # 预防意外，判断 Item Files 是否存在
-            if os.path.exists(item_path):
-                with open(item_path, encoding="utf-8") as f:
-                    item_dict = dict(json.load(f))
-                
-                args = v.get('gameTriggerArgs')
-                for i in item_dict.values():
-                    if i.get('gameTriggerArgs') == args:
-                        item_index.update({
-                            args: i.get('SourceNames', [])
-                        })
-            else:
-                continue
-
-        # 清洗 Item index 数据
-        for i in item_index.values():
-            for d in i:
-                if 'emotion' in d:
-                    del d['emotion']
-                if 'rate' in d:
-                    del d['rate']
 
         # 读取 fetter config 文件
         for i in fetters_config_list:
@@ -85,21 +59,23 @@ class GenshinVoice(object):
 
                 name = avatar[name_id]['avatarName'] if name_id else None
                 switch = avatar[name_id]['voiceSwitch'] if name_id else None
-                name_local = textmap.get(
-                    str(avatar[name_id]['avatarNameTextMapHash'])
-                ) if name_id else None
+                name_local = (
+                    avatar[name_id]['avatarNameText']
+                    if name_id else None
+                )
                 text_textmaphash = i.get('voiceFileTextTextMapHash')
-                text = textmap.get(str(text_textmaphash))
+                text = self.textmap.get(str(text_textmaphash))
                 # 索引 fetter_index
                 fetter_index[i_args].append({
                     "avatarName": name,
-                    "avatarNameText": name_local,
+                    "talkName": name_local,
                     "avatarSwitch": switch,
                     "voiceContent": text
                 })
             else:
                 continue
 
+        # 把 fetter 和 item 中的 sourceName 进行匹配
         for k, v in fetter_index.items():
             # 当前 args 的 item list
             # 数据类型：列表「v；*_list」；字典「d；*_index」
@@ -113,6 +89,7 @@ class GenshinVoice(object):
                 source_file_name = item_list[seq].get('sourceFileName')
                 v[list_seq].update(sourceFileName=source_file_name)
 
+        # 生成 fnv164 hash 索引
         data.clear()
         for v in fetter_index.values():
             for i in v:
@@ -122,43 +99,118 @@ class GenshinVoice(object):
                 })
 
         # Debug 用测试代码
-        # output0_path = os.path.join(self.path, "output0.json")
-        # with open(output0_path, "w", encoding="utf-8") as f:
-        #     json.dump(data, f, ensure_ascii=False, indent=2)
-        pass
+        # self.output_json("output0.json", data)
+        # pass
+
+    def create_dialog_index(self, npc: dict, data: dict):
+        item_index = dict()
+        dialog_index = dict()
+
+        self.from_lut_index_item(data, item_index)
+        dialog_config_list = self.input_json(
+            './ExcelBinOutput/DialogExcelConfigData.json'
+        )
+
+        for i in dialog_config_list:
+            if i.get('GFLDJMJKIKE'):
+                i_args = i.get('GFLDJMJKIKE')
+                i_npc_id = i.get('talkRole').get('id', [])
+                i_text_hash = i.get('talkContentTextMapHash')
+
+                dialog_index.update({
+                    i_args: {
+                        "talkNpcID": i_npc_id,
+                        "voiceContentTextMapHash": i_text_hash
+                    }
+                })
+
+        data.clear()
+        for k, v in item_index.items():
+            # Diglog 中存在内容索引，并且 item 中不为空
+            if dialog_index.get(k) and len(v) > 0:
+                # 存在双主角语音，此处需要用列表循环
+                vo_source = [it.get('sourceFileName') for it in v]
+                for vo in vo_source:
+                    # 计算 voice 文件索引 hash
+                    vo_hash = self.fnvhash_string(vo)
+                    # 查找 talkNpc 索引
+                    talk_id = dialog_index[k].get('talkNpcID', [])
+                    
+                    talk_name = npc.get(talk_id, {})
+                    vo_text = self.textmap.get(str(
+                        dialog_index[k].get('voiceContentTextMapHash')
+                    ))
+                    data.update({
+                        vo_hash:{
+                            "voiceContent": vo_text,
+                            "sourceFileName": vo
+                        }
+                    })
+                    data[vo_hash].update(talk_name)
+            else:
+                continue
 
     def create_avatar_index(self):
         index_dict = dict()
 
-        avatar_config_path = os.path.join(
-            self.path,
+        avatar_config_list = self.input_json(
             './ExcelBinOutput/AvatarExcelConfigData.json'
         )
-        with open(avatar_config_path, encoding="utf-8") as f:
-            avatar_config_list = json.load(f)
-        
+
         for i in avatar_config_list:
             # 分割游戏内头像名称，偷鸡角色名
             name = str(i.get('iconName')).split('_')[-1]
             # 通过角色名，读取每个角色的 voiceSwitch 名称
-            single_avatar_conf_path = os.path.join(
-                self.path,
+            single_avatar_conf = self.input_json(
                 f"./BinOutput/Avatar/ConfigAvatar_{name}.json"
             )
-            with open(single_avatar_conf_path, encoding="utf-8") as f:
-                single_avatar_conf = dict(json.load(f))
             # 下行可能引起 KeyError
             voice_switch = single_avatar_conf["audio"]["voiceSwitch"]["text"]
 
-            name_textmaphash = i.get('nameTextMapHash')
             id = i.get('id')
+            name_textmaphash = i.get('nameTextMapHash')
+            name_text = self.textmap.get(str(name_textmaphash))
             index_dict.update({
                 id: {
                     "avatarName": name,
-                    "avatarNameTextMapHash": name_textmaphash,
+                    "avatarNameText": name_text,
                     "voiceSwitch": voice_switch
                 }
             })
+        return index_dict
+
+    def create_npc_index(self, avatar_index: dict):
+        index_dict = dict()
+
+        avatar_id_list = [i for i in avatar_index.keys()]
+        avatar_name_list = [
+            i['avatarNameText']
+            for i in avatar_index.values()
+        ]
+
+        npc_config_list = self.input_json(
+            './ExcelBinOutput/NpcExcelConfigData.json'
+        )
+
+        for i in npc_config_list:
+            npc_id = str(i.get('id'))
+            npc_name = self.textmap.get(
+                str(i.get('nameTextMapHash'))
+            )
+            index_dict.update({
+                npc_id: {
+                    "talkName": npc_name
+                }
+            })
+            # 如果此 npc 是一个主要角色，打上一个 avatarName 标签
+            if npc_name in avatar_name_list:
+                avatar_id = avatar_id_list[
+                    avatar_name_list.index(npc_name)
+                ]
+                avatar_name = avatar_index[avatar_id]['avatarName']
+                index_dict[npc_id].update({
+                    "avatarName": avatar_name
+                })
         return index_dict
 
     def get_vo_lang(self):
@@ -169,8 +221,81 @@ class GenshinVoice(object):
             vo_lang = vo_lang_name[i]
         except:
             raise ValueError('language code has mistake')
-
         return vo_lang
+
+    def get_item_dict(self, id: str):
+        """专门用于读取 {item}.json 的 input_json 方法变种"""
+        item_path = os.path.join(
+            self.path, f"./BinOutput/Voice/Items/{id}.json"
+        )
+        # 应该判断 Item Files 是否存在
+        if os.path.exists(item_path):
+            with open(item_path, encoding="utf-8") as f:
+                item_dict = dict(json.load(f))
+        else:
+            item_dict = None
+        return item_dict
+
+    def lut_type_sorting(self, lut_k, lut_v, type: str, sort_index: dict):
+        """用于在 main 循环里，根据语音 type str 分类解析到对应的字典中"""
+
+        if lut_v['GameTrigger'] == type:
+            sort_index[str(lut_k)] = {
+                "itemFileID": int(lut_v['fileID']),
+                "voiceType": str(type),
+                "gameTriggerArgs": int(lut_v['gameTriggerArgs'])
+            }
+
+    def from_lut_index_item(self, lut_part: dict, item_part: dict):
+        """
+        根据输入的 Lut.json 索引到对应的 {item}.json，其中包含了 sourceFileName 字段；\n
+        此方法用于已经在 main 中完成的 type 分类拣选的 Lut 字典；
+        - lut_part 需要进行索引的已分类 Lut 字典；
+        - item_part 索引结果输出字典，此变量应该是一个空字典
+        """
+        # 根据 Lut.json 索引读取 Item Files，其中包含 sourceFileName
+        for k, v in lut_part.items():
+            item_dict = self.get_item_dict(v.get('itemFileID'))
+
+            if item_dict is not None:
+                args = v.get('gameTriggerArgs')
+                for i in item_dict.values():
+                    if i.get('gameTriggerArgs') == args:
+                        item_part.update({
+                            args: i.get('SourceNames', [])
+                        })
+            else:
+                continue
+
+        # 清洗 Item index 数据
+        for i in item_part.values():
+            for d in i:
+                if 'emotion' in d:
+                    del d['emotion']
+                if 'rate' in d:
+                    del d['rate']
+
+        return item_part
+
+    def input_json(self, relative_path: str):
+        """
+        用于读取 json 文件
+        - relative_path 是 git repo 目录下文件的相对路径
+        """
+        absolute_path = os.path.join(self.path, relative_path)
+        with open(absolute_path, encoding="utf-8") as f:
+                json_decode = json.load(f)
+        return json_decode
+
+    def output_json(self, relative_path: str, output_dict: dict):
+        """
+        用于输出 json 文件
+        - relative_path 是 git repo 目录下文件的相对路径
+        - output_dict 是要导出的字典
+        """
+        absolute_path = os.path.join(self.path, relative_path)
+        with open(absolute_path, "w", encoding="utf-8") as f:
+            json.dump(output_dict, f, ensure_ascii=False, indent=2)
 
     def fnvhash_string(self, string: str):
         hash_string = f"{self.vo_lang}\\{string}".lower()
