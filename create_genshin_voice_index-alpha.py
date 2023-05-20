@@ -37,6 +37,8 @@ class GenshinVoice(object):
         self.create_dialog_index(npc_dict, dialog_index)
         # python 3.9+ feature
         master_index = fetter_index | dialog_index
+
+        print(f"Index num: {len(master_index.keys())}")
         self.output_json("output.json", master_index)
 
         return
@@ -98,9 +100,7 @@ class GenshinVoice(object):
                     vo_hash: i
                 })
 
-        # Debug 用测试代码
-        # self.output_json("output0.json", data)
-        # pass
+        # self.output_json("[debug]fetterIndex.json", data) # Debug
 
     def create_dialog_index(self, npc: dict, data: dict):
         item_index = dict()
@@ -126,11 +126,12 @@ class GenshinVoice(object):
 
         data.clear()
         for k, v in item_index.items():
-            # Diglog 中存在内容索引，并且 item 中不为空
+            # Dialog 中存在内容索引，并且 item 中不为空
             if dialog_index.get(k) and len(v) > 0:
                 # 存在双主角语音，此处需要用列表循环
                 vo_source = [it.get('sourceFileName') for it in v]
-                for vo in vo_source:
+                vo_switch = [it.get('avatarName').lower() for it in v]
+                for seq, vo in enumerate(vo_source):
                     # 计算 voice 文件索引 hash
                     vo_hash = self.fnvhash_string(vo)
                     # 查找 talkNpc 索引
@@ -140,6 +141,10 @@ class GenshinVoice(object):
                     vo_text = self.textmap.get(str(
                         dialog_index[k].get('voiceContentTextMapHash')
                     ))
+                    # 如果语音文本为空，跳过这条语音
+                    if not vo_text:
+                        continue
+
                     data.update({
                         vo_hash:{
                             "voiceContent": vo_text,
@@ -147,6 +152,22 @@ class GenshinVoice(object):
                         }
                     })
                     data[vo_hash].update(talk_name)
+                    # 如果存在 vo_switch 字段，一般是双主角语音，
+                    # 而且在 dialog_index 中不存在 npc_id。需在此处另外索引
+                    # 这里把变量写死可能导致预料外的错误，但暂时没想到更好的解决方法
+                    if len(vo_switch) > 0 :
+                        char_switch = vo_switch[seq]
+                        if char_switch == 'switch_hero':
+                            char_name = 'PlayerBoy'
+                        elif char_switch == 'switch_heroine':
+                            char_name = 'PlayerGirl'
+                        else:
+                            continue
+                        char_talk_name = self.textmap.get(str('1533656818'))
+                        data[vo_hash].update({
+                            "talkName": char_talk_name,
+                            "avatarName": char_name
+                        })
             else:
                 continue
 
@@ -182,6 +203,9 @@ class GenshinVoice(object):
     def create_npc_index(self, avatar_index: dict):
         index_dict = dict()
 
+        # 为了避免频繁遍历字典，把字典的 key 提取为 avatar_id_list，
+        # 把我们需要匹配的关键字提取为 avatar_name_list，
+        # 而后再根据所需元素在列表中的索引位置，直接访问到其在字典中的所属 key。
         avatar_id_list = [i for i in avatar_index.keys()]
         avatar_name_list = [
             i['avatarNameText']
@@ -204,6 +228,8 @@ class GenshinVoice(object):
             })
             # 如果此 npc 是一个主要角色，打上一个 avatarName 标签
             if npc_name in avatar_name_list:
+                # 主要角色的 id 需要根据元素在 avatar_name_list 中的索引位置，
+                # 到先前生成的 avatar_id_list 中的对应索引位置访问
                 avatar_id = avatar_id_list[
                     avatar_name_list.index(npc_name)
                 ]
