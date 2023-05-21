@@ -17,7 +17,10 @@ class GenshinVoice(object):
 
     def main(self):
         # 变量申明
-        fetter_index, dialog_index, reminder_index = {}, {}, {}
+        (fetter_index,
+         dialog_index,
+         reminder_index,
+         card_index) = ({}, {}, {}, {})
 
         # 解包素材加载
         lut_dict = dict(self.input_json(
@@ -34,13 +37,15 @@ class GenshinVoice(object):
                 self.lut_type_sorting(k, v, 'Fetter', fetter_index)
                 self.lut_type_sorting(k, v, 'Dialog', dialog_index)
                 self.lut_type_sorting(k, v, 'DungeonReminder', reminder_index)
+                self.lut_type_sorting(k, v, 'Card', card_index)
 
         self.create_fetter_index(avatar_dict, fetter_index)
         self.create_dialog_index(npc_dict, dialog_index)
         self.create_reminder_index(npc_dict, reminder_index)
+        self.create_card_index(avatar_dict, card_index)
 
         # python 3.9+ feature
-        master_index = fetter_index | dialog_index | reminder_index
+        master_index = fetter_index | dialog_index | reminder_index | card_index
 
         print(f"Index num: {len(master_index.keys())}")
         self.output_json(os.path.join(
@@ -239,6 +244,78 @@ class GenshinVoice(object):
                             "talkName": char_talk_name,
                             "avatarName": char_name
                         })
+            else:
+                continue
+
+    def create_card_index(self, avatar: dict, data: dict):
+        _item_index, _card_index = {}, {}
+
+        self.from_lut_index_item(data, _item_index)
+        card_config_list = self.input_json(
+            './ExcelBinOutput/GCGTalkDetailExcelConfigData.json'
+        )
+        card_tutorial_list = self.input_json(
+            './ExcelBinOutput/GCGTutorialTextExcelConfigData.json'
+        )
+
+        # 读取 card config 文件
+        for i in card_config_list:
+            if i.get('FBFNOLKLOIG'):
+                voice_id = i.get('FBFNOLKLOIG')
+                avatar_id = list(i.get('KBEMEHPIDIN'))[0]
+                # 过滤掉非主要角色的语音
+                if avatar_id not in avatar:
+                    continue
+                avatar_name = avatar[avatar_id]['avatarName']
+                local_name = avatar[avatar_id]['avatarNameText']
+                text_textmaphash = list(i.get('LGMLAPHGEOL'))[0]
+                text = self.textmap.get(str(text_textmaphash))
+                # 索引 card_index
+                _card_index.update({
+                    voice_id: {
+                        "avatarName": avatar_name,
+                        "talkName": local_name,
+                        "voiceContent": text
+                    }
+                })
+            else:
+                continue
+
+        # 七圣召唤新手教程语音
+        for i in card_tutorial_list:
+            if i.get('KIJDMNMKHJL'):
+                voice_id = i.get('KIJDMNMKHJL')
+                text_textmaphash = i.get('KEACHGHNLED')
+                text = self.textmap.get(str(text_textmaphash))
+                avatar_name = avatar[10000039]['avatarName']
+                local_name = avatar[10000039]['avatarNameText']
+
+                # 不出意外的话应该都是迪奥娜的语音，此处添加校验
+                speaker_check = str(
+                    _item_index[voice_id][0]['sourceFileName']
+                ).split('_')
+                if speaker_check[-2] != 'diona':
+                    raise IndexError(f"Please Check Voice ID: {voice_id}")
+
+                _card_index.update({
+                    voice_id: {
+                        "avatarName": avatar_name,
+                        "talkName": local_name,
+                        "voiceContent": text,
+                    }
+                })
+
+        data.clear()
+        for k, v in _item_index.items():
+            if k in _card_index:
+                vo_source = [it.get('sourceFileName') for it in v][0]
+                vo_hash = self.fnvhash_string(vo_source)
+                data.update({
+                    vo_hash: _card_index[k]
+                })
+                data[vo_hash].update({
+                    "sourceFileName": vo_source
+                })
             else:
                 continue
 
