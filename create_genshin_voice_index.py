@@ -391,7 +391,7 @@ class GenshinVoice(object):
     def output_json(self, absolute_path: str, output_dict: dict):
         """
         用于输出 json 文件
-        - relative_path 是 git repo 目录下文件的相对路径
+        - absolute_path 是输出 json 的绝对路径
         - output_dict 是要导出的字典
         """
         with open(absolute_path, "w", encoding="utf-8") as f:
