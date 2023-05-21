@@ -1,14 +1,15 @@
 import os
 import json
 import argparse
+from multiprocessing import Pool
 from collections import defaultdict
 from fnvhash import fnv1_64
 
 class GenshinVoice(object):
-    def __init__(self, git_path: str, lang: str, dest: str):
+    def __init__(self, git_path: str, output_path: str, lang: str):
         self.path = git_path
+        self.output_path = output_path
         self.lang = lang
-        self.dest = dest + '/'
         self.vo_lang = self.get_vo_lang()
         self.textmap = dict(self.input_json(
             f"./TextMap/TextMap{self.lang}.json"
@@ -16,8 +17,7 @@ class GenshinVoice(object):
 
     def main(self):
         # 变量申明
-        fetter_index = dict()
-        dialog_index = dict()
+        fetter_index, dialog_index, reminder_index = {}, {}, {}
 
         # 解包素材加载
         lut_dict = dict(self.input_json(
@@ -33,14 +33,19 @@ class GenshinVoice(object):
             if v.get('gameTriggerArgs'):
                 self.lut_type_sorting(k, v, 'Fetter', fetter_index)
                 self.lut_type_sorting(k, v, 'Dialog', dialog_index)
+                self.lut_type_sorting(k, v, 'DungeonReminder', reminder_index)
 
         self.create_fetter_index(avatar_dict, fetter_index)
         self.create_dialog_index(npc_dict, dialog_index)
+        self.create_reminder_index(npc_dict, reminder_index)
+
         # python 3.9+ feature
-        master_index = fetter_index | dialog_index
+        master_index = fetter_index | dialog_index | reminder_index
 
         print(f"Index num: {len(master_index.keys())}")
-        self.output_json(self.dest + self.vo_lang + ".json", master_index)
+        self.output_json(os.path.join(
+            self.output_path, f"{self.lang}_output.json"
+            ), master_index)
 
         return
 
@@ -101,8 +106,6 @@ class GenshinVoice(object):
                     vo_hash: i
                 })
 
-        # self.output_json("[debug]fetterIndex.json", data) # Debug
-
     def create_dialog_index(self, npc: dict, data: dict):
         item_index = dict()
         dialog_index = dict()
@@ -156,7 +159,75 @@ class GenshinVoice(object):
                     # 如果存在 vo_switch 字段，一般是双主角语音，
                     # 而且在 dialog_index 中不存在 npc_id。需在此处另外索引
                     # 这里把变量写死可能导致预料外的错误，但暂时没想到更好的解决方法
-                    if len(vo_switch) > 0 :
+                    if len(vo_switch) > 1 :
+                        char_switch = vo_switch[seq]
+                        if char_switch == 'switch_hero':
+                            char_name = 'PlayerBoy'
+                        elif char_switch == 'switch_heroine':
+                            char_name = 'PlayerGirl'
+                        else:
+                            continue
+                        char_talk_name = self.textmap.get(str('1533656818'))
+                        data[vo_hash].update({
+                            "talkName": char_talk_name,
+                            "avatarName": char_name
+                        })
+            else:
+                continue
+
+    def create_reminder_index(self, npc: dict, data: dict):
+        _item_index, _reminder_index = {}, {}
+
+        self.from_lut_index_item(data, _item_index)
+        reminder_config_list = self.input_json(
+            './ExcelBinOutput/ReminderExcelConfigData.json'
+        )
+
+        for d in reminder_config_list:
+            if d.get('id'):
+                _args = d.get('id')
+                _speaker = self.textmap.get(str(d.get('speakerTextMapHash')))
+                _content = self.textmap.get(str(d.get('contentTextMapHash')))
+                _reminder_index.update({
+                    _args: {
+                        "talkName": _speaker,
+                        "voiceContent": _content
+                    }
+                })
+            else:
+                continue
+        
+        # 重新构建 npc 索引，因为 reminder 不包含 npc_id 无法直接调用
+        npc_dict = {}
+        for v in npc.values():
+            if v.get('avatarName'):
+                npc_dict.update({
+                    v.get('talkName'): v.get('avatarName')
+                })
+
+        data.clear()
+        for k, v in _item_index.items():
+            if _reminder_index.get(k) and len(v) > 0:
+                # 存在双主角语音，此处需要用列表循环
+                vo_source = [it.get('sourceFileName') for it in v]
+                vo_switch = [it.get('avatarName').lower() for it in v]
+                for seq, vo in enumerate(vo_source):
+                    vo_hash = self.fnvhash_string(vo)
+                    vo_name = _reminder_index[k].get('talkName')
+                    vo_text = _reminder_index[k].get('voiceContent')
+                    data.update({
+                        vo_hash:{
+                            "sourceFileName": vo,
+                            "voiceContent": vo_text,
+                            "talkName": vo_name
+                        }
+                    })
+                    if vo_name in npc_dict:
+                        data[vo_hash].update({
+                            "avatarName": npc_dict[vo_name]
+                        })
+                    # 如果存在 vo_switch 字段，一般是双主角语音
+                    if len(vo_switch) > 1 :
                         char_switch = vo_switch[seq]
                         if char_switch == 'switch_hero':
                             char_name = 'PlayerBoy'
@@ -250,18 +321,27 @@ class GenshinVoice(object):
             raise ValueError('language code has mistake')
         return vo_lang
 
-    def get_item_dict(self, id: str):
+    def get_item_dict(self, lut_value: str):
         """专门用于读取 {item}.json 的 input_json 方法变种"""
+
+        _id = lut_value.get('itemFileID')
         item_path = os.path.join(
-            self.path, f"./BinOutput/Voice/Items/{id}.json"
+            self.path, f"./BinOutput/Voice/Items/{_id}.json"
         )
         # 应该判断 Item Files 是否存在
         if os.path.exists(item_path):
             with open(item_path, encoding="utf-8") as f:
                 item_dict = dict(json.load(f))
         else:
-            item_dict = None
-        return item_dict
+            return None
+        
+        args = lut_value.get('gameTriggerArgs')
+        for i in item_dict.values():
+            if i.get('gameTriggerArgs') == args:
+                result = {
+                    args: i.get('SourceNames', [])
+                }
+        return result
 
     def lut_type_sorting(self, lut_k, lut_v, type: str, sort_index: dict):
         """用于在 main 循环里，根据语音 type str 分类解析到对应的字典中"""
@@ -281,18 +361,14 @@ class GenshinVoice(object):
         - item_part 索引结果输出字典，此变量应该是一个空字典
         """
         # 根据 Lut.json 索引读取 Item Files，其中包含 sourceFileName
-        for k, v in lut_part.items():
-            item_dict = self.get_item_dict(v.get('itemFileID'))
-
-            if item_dict is not None:
-                args = v.get('gameTriggerArgs')
-                for i in item_dict.values():
-                    if i.get('gameTriggerArgs') == args:
-                        item_part.update({
-                            args: i.get('SourceNames', [])
-                        })
-            else:
-                continue
+        # 异步多进程加载 item.json，第一次写多进程此处有待商榷
+        with Pool(processes=4) as pool:
+            results = pool.map_async(self.get_item_dict, lut_part.values())
+            return_results = results.get()
+            
+            for result in return_results:
+                if result is not None:
+                    item_part.update(result)
 
         # 清洗 Item index 数据
         for i in item_part.values():
@@ -301,8 +377,6 @@ class GenshinVoice(object):
                     del d['emotion']
                 if 'rate' in d:
                     del d['rate']
-
-        return item_part
 
     def input_json(self, relative_path: str):
         """
@@ -314,13 +388,12 @@ class GenshinVoice(object):
                 json_decode = json.load(f)
         return json_decode
 
-    def output_json(self, relative_path: str, output_dict: dict):
+    def output_json(self, absolute_path: str, output_dict: dict):
         """
         用于输出 json 文件
         - relative_path 是 git repo 目录下文件的相对路径
         - output_dict 是要导出的字典
         """
-        absolute_path = os.path.join(self.path, relative_path)
         with open(absolute_path, "w", encoding="utf-8") as f:
             json.dump(output_dict, f, ensure_ascii=False, indent=2)
 
@@ -338,7 +411,5 @@ if __name__ == '__main__':
     parser.add_argument('--dest', type=str, help='目标路径，可选，默认为数据文件夹根目录', default='./')
     parser.add_argument('--lang', type=str, help='语言，可选 CHS/EN/JP/KR，默认为 CHS', default='CHS')
     args = parser.parse_args()
-    path = str(args.source)
-    lang = str(args.lang)
-    dest = str(args.dest)
-    GenshinVoice(path, lang, dest).main()
+
+    GenshinVoice(args.source, args.dest, args.lang).main()
