@@ -5,9 +5,10 @@ from collections import defaultdict
 from fnvhash import fnv1_64
 
 class GenshinVoice(object):
-    def __init__(self, git_path: str, lang: str):
+    def __init__(self, git_path: str, lang: str, dest: str):
         self.path = git_path
         self.lang = lang
+        self.dest = dest + '/'
         self.vo_lang = self.get_vo_lang()
         self.textmap = dict(self.input_json(
             f"./TextMap/TextMap{self.lang}.json"
@@ -39,7 +40,7 @@ class GenshinVoice(object):
         master_index = fetter_index | dialog_index
 
         print(f"Index num: {len(master_index.keys())}")
-        self.output_json("output.json", master_index)
+        self.output_json(self.dest + self.vo_lang + ".json", master_index)
 
         return
 
@@ -333,6 +334,11 @@ class GenshinVoice(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    path = 'your/animeGameData/local/path'
-    lang = 'CHS'
-    GenshinVoice(path, lang).main()
+    parser.add_argument('--source', type=str, help='Dim 的原神数据文件路径', required=True)
+    parser.add_argument('--dest', type=str, help='目标路径，可选，默认为数据文件夹根目录', default='./')
+    parser.add_argument('--lang', type=str, help='语言，可选 CHS/EN/JP/KR，默认为 CHS', default='CHS')
+    args = parser.parse_args()
+    path = str(args.source)
+    lang = str(args.lang)
+    dest = str(args.dest)
+    GenshinVoice(path, lang, dest).main()
