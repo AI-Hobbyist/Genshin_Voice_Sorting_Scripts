@@ -50,10 +50,10 @@ class GenshinVoice(object):
         return
 
     def create_fetter_index(self, avatar: dict, data: dict):
-        item_index = dict()
-        fetter_index = defaultdict(list)
+        _item_index = dict()
+        _fetter_index = defaultdict(list)
 
-        self.from_lut_index_item(data, item_index)
+        self.from_lut_index_item(data, _item_index)
 
         fetters_config_list = self.input_json(
             './ExcelBinOutput/FettersExcelConfigData.json'
@@ -74,7 +74,7 @@ class GenshinVoice(object):
                 text_textmaphash = i.get('voiceFileTextTextMapHash')
                 text = self.textmap.get(str(text_textmaphash))
                 # 索引 fetter_index
-                fetter_index[i_args].append({
+                _fetter_index[i_args].append({
                     "avatarName": name,
                     "talkName": name_local,
                     "avatarSwitch": switch,
@@ -84,10 +84,10 @@ class GenshinVoice(object):
                 continue
 
         # 把 fetter 和 item 中的 sourceName 进行匹配
-        for k, v in fetter_index.items():
+        for k, v in _fetter_index.items():
             # 当前 args 的 item list
             # 数据类型：列表「v；*_list」；字典「d；*_index」
-            item_list = item_index.get(int(k))
+            item_list = _item_index.get(int(k))
             item_switch_list = [d.get('avatarName').lower() for d in item_list]
             fetter_switch_list = [d.get('avatarSwitch').lower() for d in v]
 
@@ -99,7 +99,7 @@ class GenshinVoice(object):
 
         # 生成 fnv164 hash 索引
         data.clear()
-        for v in fetter_index.values():
+        for v in _fetter_index.values():
             for i in v:
                 vo_hash = self.fnvhash_string(i.get('sourceFileName'))
                 data.update({
@@ -107,10 +107,9 @@ class GenshinVoice(object):
                 })
 
     def create_dialog_index(self, npc: dict, data: dict):
-        item_index = dict()
-        dialog_index = dict()
+        _item_index, _dialog_index = {}, {}
 
-        self.from_lut_index_item(data, item_index)
+        self.from_lut_index_item(data, _item_index)
         dialog_config_list = self.input_json(
             './ExcelBinOutput/DialogExcelConfigData.json'
         )
@@ -121,7 +120,7 @@ class GenshinVoice(object):
                 i_npc_id = i.get('talkRole').get('id', [])
                 i_text_hash = i.get('talkContentTextMapHash')
 
-                dialog_index.update({
+                _dialog_index.update({
                     i_args: {
                         "talkNpcID": i_npc_id,
                         "voiceContentTextMapHash": i_text_hash
@@ -129,9 +128,9 @@ class GenshinVoice(object):
                 })
 
         data.clear()
-        for k, v in item_index.items():
+        for k, v in _item_index.items():
             # Dialog 中存在内容索引，并且 item 中不为空
-            if dialog_index.get(k) and len(v) > 0:
+            if _dialog_index.get(k) and len(v) > 0:
                 # 存在双主角语音，此处需要用列表循环
                 vo_source = [it.get('sourceFileName') for it in v]
                 vo_switch = [it.get('avatarName').lower() for it in v]
@@ -139,11 +138,11 @@ class GenshinVoice(object):
                     # 计算 voice 文件索引 hash
                     vo_hash = self.fnvhash_string(vo)
                     # 查找 talkNpc 索引
-                    talk_id = dialog_index[k].get('talkNpcID', [])
+                    talk_id = _dialog_index[k].get('talkNpcID', [])
                     
                     talk_name = npc.get(talk_id, {})
                     vo_text = self.textmap.get(str(
-                        dialog_index[k].get('voiceContentTextMapHash')
+                        _dialog_index[k].get('voiceContentTextMapHash')
                     ))
                     # 如果语音文本为空，跳过这条语音
                     if not vo_text:
@@ -198,10 +197,10 @@ class GenshinVoice(object):
                 continue
         
         # 重新构建 npc 索引，因为 reminder 不包含 npc_id 无法直接调用
-        npc_dict = {}
+        _npc_dict = {}
         for v in npc.values():
             if v.get('avatarName'):
-                npc_dict.update({
+                _npc_dict.update({
                     v.get('talkName'): v.get('avatarName')
                 })
 
@@ -222,9 +221,9 @@ class GenshinVoice(object):
                             "talkName": vo_name
                         }
                     })
-                    if vo_name in npc_dict:
+                    if vo_name in _npc_dict:
                         data[vo_hash].update({
-                            "avatarName": npc_dict[vo_name]
+                            "avatarName": _npc_dict[vo_name]
                         })
                     # 如果存在 vo_switch 字段，一般是双主角语音
                     if len(vo_switch) > 1 :
@@ -244,7 +243,7 @@ class GenshinVoice(object):
                 continue
 
     def create_avatar_index(self):
-        index_dict = dict()
+        index_dict = {}
 
         avatar_config_list = self.input_json(
             './ExcelBinOutput/AvatarExcelConfigData.json'
@@ -273,7 +272,7 @@ class GenshinVoice(object):
         return index_dict
 
     def create_npc_index(self, avatar_index: dict):
-        index_dict = dict()
+        index_dict = {}
 
         # 为了避免频繁遍历字典，把字典的 key 提取为 avatar_id_list，
         # 把我们需要匹配的关键字提取为 avatar_name_list，
