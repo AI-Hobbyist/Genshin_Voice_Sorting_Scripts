@@ -260,15 +260,15 @@ class GenshinVoice(object):
 
         # 读取 card config 文件
         for i in card_config_list:
-            if i.get('FBFNOLKLOIG'):
-                voice_id = i.get('FBFNOLKLOIG')
-                avatar_id = list(i.get('KBEMEHPIDIN'))[0]
+            if i.get('OKHABIEEENI'):
+                voice_id = i.get('OKHABIEEENI')
+                avatar_id = list(i.get('PBAJELCHHIK'))[0]
                 # 过滤掉非主要角色的语音
                 if avatar_id not in avatar:
                     continue
                 avatar_name = avatar[avatar_id]['avatarName']
                 local_name = avatar[avatar_id]['avatarNameText']
-                text_textmaphash = list(i.get('LGMLAPHGEOL'))[0]
+                text_textmaphash = list(i.get('PMHKGKHNDNM'))[0]
                 text = self.textmap.get(str(text_textmaphash))
                 # 索引 card_index
                 _card_index.update({
@@ -283,19 +283,26 @@ class GenshinVoice(object):
 
         # 七圣召唤新手教程语音
         for i in card_tutorial_list:
-            if i.get('KIJDMNMKHJL'):
-                voice_id = i.get('KIJDMNMKHJL')
-                text_textmaphash = i.get('KEACHGHNLED')
+            if i.get('IELLJFDBGOE'):
+                voice_id = i.get('IELLJFDBGOE')
+                text_textmaphash = i.get('AGPIIPENCKN')
                 text = self.textmap.get(str(text_textmaphash))
-                avatar_name = avatar[10000039]['avatarName']
-                local_name = avatar[10000039]['avatarNameText']
 
-                # 不出意外的话应该都是迪奥娜的语音，此处添加校验
+                # 此处添加校验，检查是否为预料内的说话人
                 speaker_check = str(
                     _item_index[voice_id][0]['sourceFileName']
                 ).split('_')
-                if speaker_check[-2] != 'diona':
+                if speaker_check[-2] == 'diona':
+                    avatar_id = 10000039
+                elif speaker_check[-4] == 'shinobu':
+                    avatar_id = 10000065
+                elif speaker_check[-4] == 'itto':
+                    avatar_id = 10000057
+                else:
                     raise IndexError(f"Please Check Voice ID: {voice_id}")
+
+                avatar_name = avatar[avatar_id]['avatarName']
+                local_name = avatar[avatar_id]['avatarNameText']
 
                 _card_index.update({
                     voice_id: {
@@ -444,6 +451,11 @@ class GenshinVoice(object):
         for file in os.listdir(item_dir):
             if file.endswith('.json'):
                 item_path_list.append(os.path.join(item_dir, file))
+        # 3.7 版本部分 {item}.json 存放位置异常补丁
+        item_dir_patch = os.path.join(self.path, './BinOutput/Voice')
+        for file in os.listdir(item_dir_patch):
+            if file.endswith('.json'):
+                item_path_list.append(os.path.join(item_dir_patch, file))
 
         for i in item_path_list:
             result = self.get_item_dict_in(i)
