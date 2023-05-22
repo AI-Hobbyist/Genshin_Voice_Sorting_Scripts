@@ -1,7 +1,6 @@
 import os
 import json
 import argparse
-from multiprocessing import Pool
 from collections import defaultdict
 from fnvhash import fnv1_64
 
@@ -14,6 +13,7 @@ class GenshinVoice(object):
         self.textmap = dict(self.input_json(
             f"./TextMap/TextMap{self.lang}.json"
         ))
+        self.vo_item = self.get_item_dict_sort()
 
     def main(self):
         # 变量申明
@@ -58,7 +58,7 @@ class GenshinVoice(object):
         _item_index = dict()
         _fetter_index = defaultdict(list)
 
-        self.from_lut_index_item(data, _item_index)
+        self.lut_index_item(data, _item_index)
 
         fetters_config_list = self.input_json(
             './ExcelBinOutput/FettersExcelConfigData.json'
@@ -114,7 +114,7 @@ class GenshinVoice(object):
     def create_dialog_index(self, npc: dict, data: dict):
         _item_index, _dialog_index = {}, {}
 
-        self.from_lut_index_item(data, _item_index)
+        self.lut_index_item(data, _item_index)
         dialog_config_list = self.input_json(
             './ExcelBinOutput/DialogExcelConfigData.json'
         )
@@ -182,7 +182,7 @@ class GenshinVoice(object):
     def create_reminder_index(self, npc: dict, data: dict):
         _item_index, _reminder_index = {}, {}
 
-        self.from_lut_index_item(data, _item_index)
+        self.lut_index_item(data, _item_index)
         reminder_config_list = self.input_json(
             './ExcelBinOutput/ReminderExcelConfigData.json'
         )
@@ -250,7 +250,7 @@ class GenshinVoice(object):
     def create_card_index(self, avatar: dict, data: dict):
         _item_index, _card_index = {}, {}
 
-        self.from_lut_index_item(data, _item_index)
+        self.lut_index_item(data, _item_index)
         card_config_list = self.input_json(
             './ExcelBinOutput/GCGTalkDetailExcelConfigData.json'
         )
@@ -397,27 +397,73 @@ class GenshinVoice(object):
             raise ValueError('language code has mistake')
         return vo_lang
 
-    def get_item_dict(self, lut_value: str):
-        """专门用于读取 {item}.json 的 input_json 方法变种"""
+    def get_item_dict_in(self, path: str):
+        """
+        专门用于读取 {item}.json 的 input_json 方法变种\n
+        直接把 BinOutpt/Voice/Items 目录下所有文件加载进来
+        """
+        with open(path, encoding="utf-8") as f:
+            item_dict = dict(json.load(f))
+        # 返回结果申明
+        result_dict = {}
+        for v in item_dict.values():
+            # 如果语音索引 id 不存在，就跳过
+            vo_id = v.get('gameTriggerArgs')
+            vo_type = v.get('GameTrigger')
+            vo_source = v.get('SourceNames')
+            if vo_id == None or vo_source == None:
+                continue
+            # SoureName 中无效键值对清洗
+            for d in vo_source:
+                if 'emotion' in d:
+                    del d['emotion']
+                if 'rate' in d:
+                    del d['rate']
+            # 如果不存在重名键，直接 update
+            if vo_id not in result_dict:
+                result_dict.update({
+                    vo_id: {
+                        vo_type: vo_source
+                    }
+                })
+                continue
+            # 如果有重名键就 update 值
+            result_dict[vo_id].update({
+                vo_type: vo_source
+            })
+        return result_dict
 
-        _id = lut_value.get('itemFileID')
-        item_path = os.path.join(
-            self.path, f"./BinOutput/Voice/Items/{_id}.json"
-        )
-        # 应该判断 Item Files 是否存在
-        if os.path.exists(item_path):
-            with open(item_path, encoding="utf-8") as f:
-                item_dict = dict(json.load(f))
-        else:
-            return None
-        
-        args = lut_value.get('gameTriggerArgs')
-        for i in item_dict.values():
-            if i.get('gameTriggerArgs') == args:
-                result = {
-                    args: i.get('SourceNames', [])
-                }
-        return result
+    def get_item_dict_sort(self):
+        """
+        索引出全部 item.json 的 voice id 和 source name
+        """
+        voice_item = {}
+        # 创建 {item}.json 的路径列表
+        item_dir = os.path.join(self.path, './BinOutput/Voice/Items')
+        item_path_list = []
+        for file in os.listdir(item_dir):
+            if file.endswith('.json'):
+                item_path_list.append(os.path.join(item_dir, file))
+
+        for i in item_path_list:
+            result = self.get_item_dict_in(i)
+            for _id, _item in result.items():
+                if _id not in voice_item:
+                    voice_item.update({
+                        _id: _item
+                    })
+                    continue
+
+                # 不知道键名，需要 for loop 取值
+                for _type in _item.keys():
+                    if voice_item[_id].get(_type):
+                        # 此处从列表中取值，追加到输出列表中
+                        for j in _item[_type]:
+                            voice_item[_id][_type].append(j)
+                    else:
+                        voice_item[_id].update(_item)
+
+        return voice_item
 
     def lut_type_sorting(self, lut_k, lut_v, type: str, sort_index: dict):
         """用于在 main 循环里，根据语音 type str 分类解析到对应的字典中"""
@@ -429,30 +475,25 @@ class GenshinVoice(object):
                 "gameTriggerArgs": int(lut_v['gameTriggerArgs'])
             }
 
-    def from_lut_index_item(self, lut_part: dict, item_part: dict):
+    def lut_index_item(self, lut_part: dict, item_part: dict):
         """
-        根据输入的 Lut.json 索引到对应的 {item}.json，其中包含了 sourceFileName 字段；\n
+        根据输入的 Lut.json 索引到对应的 vo_item，其中包含了 sourceFileName 字段；\n
         此方法用于已经在 main 中完成的 type 分类拣选的 Lut 字典；
         - lut_part 需要进行索引的已分类 Lut 字典；
         - item_part 索引结果输出字典，此变量应该是一个空字典
         """
-        # 根据 Lut.json 索引读取 Item Files，其中包含 sourceFileName
-        # 异步多进程加载 item.json，第一次写多进程此处有待商榷
-        with Pool(processes=4) as pool:
-            results = pool.map_async(self.get_item_dict, lut_part.values())
-            return_results = results.get()
-            
-            for result in return_results:
-                if result is not None:
-                    item_part.update(result)
 
-        # 清洗 Item index 数据
-        for i in item_part.values():
-            for d in i:
-                if 'emotion' in d:
-                    del d['emotion']
-                if 'rate' in d:
-                    del d['rate']
+        for v in lut_part.values():
+            vo_id = v.get('gameTriggerArgs')
+            vo_type = v.get('voiceType')
+            if vo_id in self.vo_item:
+                if vo_type in self.vo_item[vo_id]:
+                    item_part.update({
+                        vo_id: self.vo_item[vo_id][vo_type]
+                    })
+                    del self.vo_item[vo_id][vo_type]
+            else:
+                continue
 
     def input_json(self, relative_path: str):
         """
