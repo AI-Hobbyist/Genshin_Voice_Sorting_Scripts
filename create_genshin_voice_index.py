@@ -262,7 +262,7 @@ class GenshinVoice(object):
         for i in card_config_list:
             if i.get('OKHABIEEENI'):
                 voice_id = i.get('OKHABIEEENI')
-                avatar_id = list(i.get('PBAJELCHHIK'))[0]
+                avatar_id = list(i.get('GFNAKJFKKGL'))[0]
                 # 过滤掉非主要角色的语音
                 if avatar_id not in avatar:
                     continue
