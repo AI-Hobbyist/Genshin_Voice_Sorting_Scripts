@@ -38,6 +38,13 @@ def is_file(full_path):
     else:
         return  False
 
+def has_vaild_content(text):
+    pattern = r'[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]+'
+    if re.search(pattern, text):
+        return True
+    else:
+        return False
+    
 f = open(index, encoding='utf8')
 data = json.load(f)
 for k in tq.tqdm(data.keys()):
@@ -54,10 +61,10 @@ for k in tq.tqdm(data.keys()):
         path = path.replace(".wem",".wav")
         wav_source = source + '/' + path
         wav_file = os.path.basename(path)
-        if text is not None and char_name is not None:
+        if has_vaild_content(text) == True and char_name is not None:
             dest_dir = dest + '/' + char_name
             wav_path = dest_dir + '/' + wav_file
-            if text is not None and is_in(path, filter) == False and is_file(wav_source) == True:
+            if is_in(path, filter) == False and is_file(wav_source) == True:
                 if not os.path.exists(dest_dir):
                     os.makedirs(dest_dir)
                 copy(wav_source, wav_path)
