@@ -56,7 +56,7 @@ for k in tq.tqdm(data.keys()):
             if char_name in renameDict:
                 char_name = renameDict[char_name]
             if char_name == "旅行者" :
-                char_name == avatar_name
+                char_name = avatar_name
         path = data.get(k).get('sourceFileName')
         path = path.replace(".wem",".wav")
         wav_source = source + '/' + path
