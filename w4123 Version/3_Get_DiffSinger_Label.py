@@ -41,7 +41,7 @@ def is_file(full_path):
         return  False
 
 def has_vaild_content(text):
-    pattern = r'[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]+'
+    pattern = r'[a-zA-Z0-9\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]+'
     if re.search(pattern, text):
         return True
     else:
