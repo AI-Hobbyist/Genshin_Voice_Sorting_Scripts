@@ -33,7 +33,7 @@ class GenshinVoice(object):
 
         # 语音分类解析
         for k, v in dict(lut_dict).items():
-            if v.get('KMMBCJDNDNM'):
+            if v.get('GameTrigger'):
                 self.lut_type_sorting(k, v, 'Fetter', fetter_index)
                 self.lut_type_sorting(k, v, 'Dialog', dialog_index)
                 self.lut_type_sorting(k, v, 'DungeonReminder', reminder_index)
@@ -341,7 +341,7 @@ class GenshinVoice(object):
                 f"./BinOutput/Avatar/ConfigAvatar_{name}.json"
             )
             # 下行可能引起 KeyError
-            voice_switch = single_avatar_conf["IOFAPEDIPMO"]["DGGBPBLHCIH"]["MLONDJJHAAK"]
+            voice_switch = single_avatar_conf["audio"]["voiceSwitch"]["text"]
 
             id = i.get('id')
             name_textmaphash = i.get('nameTextMapHash')
@@ -495,13 +495,13 @@ class GenshinVoice(object):
     def lut_type_sorting(self, lut_k, lut_v, type: str, sort_index: dict):
         """用于在 main 循环里，根据语音 type str 分类解析到对应的字典中"""
 
-        if lut_v['KMMBCJDNDNM'] == type:
-            if not lut_v.get('JAOANONPLDI'):
+        if lut_v['GameTrigger'] == type:
+            if not lut_v.get('gameTriggerArgs'):
                 return
             sort_index[str(lut_k)] = {
-                "itemFileID": int(lut_v['BOAFNMHAPGK']),
+                "itemFileID": int(lut_v['fileID']),
                 "voiceType": str(type),
-                "gameTriggerArgs": int(lut_v['JAOANONPLDI'])
+                "gameTriggerArgs": int(lut_v['gameTriggerArgs'])
             }
 
     def lut_index_item(self, lut_part: dict, item_part: dict):
