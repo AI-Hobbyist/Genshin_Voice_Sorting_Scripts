@@ -49,7 +49,7 @@ class GenshinVoice(object):
 
         print(f"Index num: {len(master_index.keys())}")
         self.output_json(os.path.join(
-            self.output_path, f"{self.lang}_output.json"
+            self.output_path, f"{self.lang}.json"
             ), master_index)
 
         return

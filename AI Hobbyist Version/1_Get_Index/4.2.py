@@ -49,7 +49,7 @@ class GenshinVoice(object):
 
         print(f"Index num: {len(master_index.keys())}")
         self.output_json(os.path.join(
-            self.output_path, f"{self.lang}_output.json"
+            self.output_path, f"{self.lang}.json"
             ), master_index)
 
         return
@@ -267,15 +267,15 @@ class GenshinVoice(object):
 
         # 读取 card config 文件
         for i in card_config_list:
-            if i.get('HBJLGCBEPCL'):
-                voice_id = i.get('HBJLGCBEPCL')
-                avatar_id = list(i.get('JNPGAABKFMH'))[0]
+            if i.get('MFLHFIGJFDA'):
+                voice_id = i.get('MFLHFIGJFDA')
+                avatar_id = list(i.get('AMIEBGMEJGP'))[0]
                 # 过滤掉非主要角色的语音
                 if avatar_id not in avatar:
                     continue
                 avatar_name = avatar[avatar_id]['avatarName']
                 local_name = avatar[avatar_id]['avatarNameText']
-                text_textmaphash = list(i.get('HJLKAMFMBIE'))[0]
+                text_textmaphash = list(i.get('AMIEBGMEJGP'))[0]
                 text = self.textmap.get(str(text_textmaphash))
                 # 索引 card_index
                 _card_index.update({
@@ -290,9 +290,9 @@ class GenshinVoice(object):
 
         # 七圣召唤新手教程语音
         for i in card_tutorial_list:
-            if i.get('HLAHJLDEHMO'):
-                voice_id = i.get('HLAHJLDEHMO')
-                text_textmaphash = i.get('HKNHNGAOGML')
+            if i.get('IBEHGHMIHOD'):
+                voice_id = i.get('IBEHGHMIHOD')
+                text_textmaphash = i.get('DBALLFLFAPO')
                 text = self.textmap.get(str(text_textmaphash))
 
                 # 此处添加校验，检查是否为预料内的说话人
