@@ -11,12 +11,14 @@ parser.add_argument('--source', type=str, help='未整理数据集目录', requi
 parser.add_argument('--index', type=str, help='索引路径', required=True)
 parser.add_argument('--dest', type=str, help='目标路径', required=True)
 parser.add_argument('--lang', type=str, help='语言（可选CHS/EN/JP/KR，默认为CHS）', default="CHS")
+parser.add_argument('--mode', type=str, help='模式(复制(cp)/移动(mv))', default="cp")
 args = parser.parse_args()
 
 source = str(args.source)
 dest = str(args.dest)
 index = str(args.index)
 lang = str(args.lang)
+mode = str(args.mode)
 filter = 'monster'
 battle = 'battle|life'
 conv = 'fetter'
@@ -113,7 +115,13 @@ for k in tq.tqdm(data.keys()):
                     if not os.path.exists(vo_dest_dir):
                        Path(f"{vo_dest_dir}").mkdir(parents=True)
                     dest_path = vo_wav_path
-                move(wav_source,dest_path)
+                if mode.capitalize()=='CP':
+                    copy(wav_source,dest_path)
+                elif mode.capitalize()=='MV':
+                    move(wav_source,dest_path)
+                else:
+                    print("模式错误，请选择cp/mv")
+                    exit()
     except:
         pass
 f.close()
