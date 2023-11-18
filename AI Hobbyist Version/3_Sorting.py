@@ -90,7 +90,7 @@ for k in tq.tqdm(data.keys()):
             if char_name in renameDict:
                 char_name = renameDict[char_name]
             if is_in(char_name, player) == True:
-                char_name = ren_player(avatar_name,lang)p
+                char_name = ren_player(avatar_name,lang)
         path = data.get(k).get('sourceFileName')
         path = path.replace(".wem",".wav")
         wav_source = source + '/' + path
