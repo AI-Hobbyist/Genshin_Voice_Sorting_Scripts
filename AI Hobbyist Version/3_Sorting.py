@@ -115,9 +115,9 @@ for k in tq.tqdm(data.keys()):
                     if not os.path.exists(vo_dest_dir):
                        Path(f"{vo_dest_dir}").mkdir(parents=True)
                     dest_path = vo_wav_path
-                if mode.capitalize()=='CP':
+                if mode.upper()=='CP':
                     copy(wav_source,dest_path)
-                elif mode.capitalize()=='MV':
+                elif mode.upper()=='MV':
                     move(wav_source,dest_path)
                 else:
                     print("模式错误，请选择cp/mv")
