@@ -16,7 +16,7 @@ source = str(args.source)
 dest = str(args.dest)
 index = str(args.index)
 lang = str(args.lang)
-filter = 'monster'
+monster = 'monster'
 battle = 'battle|life'
 conv = 'fetter'
 player = '旅行者|旅人|Traveler|여행자'
@@ -91,15 +91,19 @@ for k in tq.tqdm(data.keys()):
         path = path.replace(".wem",".wav")
         wav_source = source + '/' + path
         wav_file = os.path.basename(path)
-        if has_vaild_content(text) == True and char_name is not None:
+        if char_name is not None:
             vo_dest_dir = f"{dest}/角色语音 - Character/{char_name}"
             bt_dest_dir = f"{dest}/战斗语音 - Battle/{char_name}"
             cv_dest_dir = f"{dest}/多人对话 - Conversation/{char_name}"
+            mo_dest_dir = f"{dest}/怪物语音 - Monster/{char_name}"
+            ot_dest_dir = f"{dest}/其它语音 - Others/{char_name}"
             lab_file = wav_file.replace(".wav",".lab")
             vo_lab_path = f"{vo_dest_dir}/{lab_file}"
             bt_lab_path = f"{bt_dest_dir}/{lab_file}"
             cv_lab_path = f"{cv_dest_dir}/{lab_file}"
-            if is_in(path, filter) == False and is_file(wav_source) == True:
+            mo_lab_path = f"{mo_dest_dir}/{lab_file}"
+            ot_lab_path = f"{ot_dest_dir}/{lab_file}"
+            if is_file(wav_source) == True:
                 if is_in(path, battle) == True:
                     if not os.path.exists(bt_dest_dir):
                        Path(f"{bt_dest_dir}").mkdir(parents=True)
@@ -108,10 +112,18 @@ for k in tq.tqdm(data.keys()):
                     if not os.path.exists(cv_dest_dir):
                        Path(f"{cv_dest_dir}").mkdir(parents=True)
                     dest_path = cv_lab_path
+                elif is_in(path,monster) == True:
+                    if not os.path.exists(mo_dest_dir):
+                       Path(f"{mo_dest_dir}").mkdir(parents=True)
+                    dest_path = mo_lab_path
+                elif has_vaild_content(text) == False:
+                    if not os.path.exists(ot_dest_dir):
+                       Path(f"{ot_dest_dir}").mkdir(parents=True)
+                    dest_path = ot_lab_path
                 else:
                     if not os.path.exists(vo_dest_dir):
                        Path(f"{vo_dest_dir}").mkdir(parents=True)
-                    dest_path = vo_lab_path
+                    dest_path = vo_lab_path            
                 Path(dest_path).write_text(text, encoding='utf-8')
     except:
         pass
