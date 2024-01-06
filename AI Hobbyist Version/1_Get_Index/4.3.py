@@ -1,6 +1,7 @@
 import os
 import json
 import argparse
+from pathlib import Path
 from collections import defaultdict
 from fnvhash import fnv1_64
 
@@ -26,20 +27,19 @@ class GenshinVoice(object):
         lut_dict = dict(self.input_json(
             './BinOutput/Voice/Lut/Lut.json'
         ))
-
         # 主要角色 ID 索引
         avatar_dict = self.create_avatar_index()
         npc_dict = self.create_npc_index(avatar_dict)
 
         # 语音分类解析
         for k, v in dict(lut_dict).items():
-            print(lut_dict)
-            if v.get('KLMMKIHGILG'):
+            if v.get('DDGNNKAFNFF'):
+                print(v)
                 self.lut_type_sorting(k, v, 'Fetter', fetter_index)
                 self.lut_type_sorting(k, v, 'Dialog', dialog_index)
                 self.lut_type_sorting(k, v, 'DungeonReminder', reminder_index)
                 self.lut_type_sorting(k, v, 'Card', card_index)
-
+                
         self.create_fetter_index(avatar_dict, fetter_index)
         self.create_dialog_index(npc_dict, dialog_index)
         self.create_reminder_index(npc_dict, reminder_index)
@@ -56,6 +56,9 @@ class GenshinVoice(object):
         return
 
     def create_fetter_index(self, avatar: dict, data: dict):
+        debugdata = json.dumps(avatar,indent = 4, ensure_ascii=False)
+        Path('./debug.json').write_text(debugdata,encoding='utf8')
+
         _item_index = dict()
         _fetter_index = defaultdict(list)
 
@@ -268,15 +271,15 @@ class GenshinVoice(object):
 
         # 读取 card config 文件
         for i in card_config_list:
-            if i.get('MFLHFIGJFDA'):
-                voice_id = i.get('MFLHFIGJFDA')
-                avatar_id = list(i.get('AMIEBGMEJGP'))[0]
+            if i.get('PDNENGPCKKL'):
+                voice_id = i.get('PDNENGPCKKL')
+                avatar_id = list(i.get('IHLOECKCMGE'))[0]
                 # 过滤掉非主要角色的语音
                 if avatar_id not in avatar:
                     continue
                 avatar_name = avatar[avatar_id]['avatarName']
                 local_name = avatar[avatar_id]['avatarNameText']
-                text_textmaphash = list(i.get('AMIEBGMEJGP'))[0]
+                text_textmaphash = list(i.get('IHLOECKCMGE'))[0]
                 text = self.textmap.get(str(text_textmaphash))
                 # 索引 card_index
                 _card_index.update({
@@ -291,9 +294,9 @@ class GenshinVoice(object):
 
         # 七圣召唤新手教程语音
         for i in card_tutorial_list:
-            if i.get('IBEHGHMIHOD'):
-                voice_id = i.get('IBEHGHMIHOD')
-                text_textmaphash = i.get('DBALLFLFAPO')
+            if i.get('MMAKMNKEICJ'):
+                voice_id = i.get('MMAKMNKEICJ')
+                text_textmaphash = i.get('NNBJGAAFKBG')
                 text = self.textmap.get(str(text_textmaphash))
 
                 # 此处添加校验，检查是否为预料内的说话人
@@ -440,12 +443,17 @@ class GenshinVoice(object):
             if v.get('GameTrigger'):
                 vo_id = v.get('gameTriggerArgs')
                 vo_type = v.get('GameTrigger')
-                vo_source = v.get('SourceNames')
+                vo_source = v.get('sourceFileName')
 
-            elif v.get('KMMBCJDNDNM'):
-                vo_id = v.get('JAOANONPLDI')
-                vo_type = v.get('KMMBCJDNDNM')
-                vo_source = v.get('EDNNCHGNMHO')
+            elif v.get('BFKCDJLLGNJ'):
+                vo_id = v.get('FMHLBONJKPJ')
+                vo_type = v.get('BFKCDJLLGNJ')
+                vo_source = v.get('CBGLAJNLFCB')
+            
+            elif v.get('BEHKGKMMAPD'):
+                vo_id = v.get('FFDHLEAFBLM')
+                vo_type = v.get('BEHKGKMMAPD')
+                vo_source = v.get('HLGOMILNFNK')
 
             if vo_id == None or vo_source == None:
                 continue
@@ -455,13 +463,20 @@ class GenshinVoice(object):
                     del d['emotion']
                 if 'rate' in d:
                     del d['rate']
-                if 'OBLHECLMAGO' in d:
-                    del d['OBLHECLMAGO']
-                    del d['FNNKMJMEINB']
-                    d['sourceFileName'] = d.get('EEFLLCGNDCG')
-                    d['avatarName'] = d.get('PNKIOAECEOB')
-                    del d['EEFLLCGNDCG']
-                    del d['PNKIOAECEOB']
+                if 'NNBGHAJLJLA' in d:
+                    del d['NNBGHAJLJLA']
+                    del d['EJNOJBCBJPP']
+                    d['sourceFileName'] = d.get('HLGOMILNFNK')
+                    d['avatarName'] = d.get('KAGFOFEDGIA')
+                    del d['HLGOMILNFNK']
+                    del d['KAGFOFEDGIA']
+                if 'GCAGMFHFFML' in d:
+                    del d['GCAGMFHFFML']
+                    del d['HBDMHPLJGBG']
+                    d['sourceFileName'] = d.get('CBGLAJNLFCB')
+                    d['avatarName'] = d.get('GJMDHCLJGHH')
+                    del d['CBGLAJNLFCB']
+                    del d['GJMDHCLJGHH']            
             # 如果不存在重名键，直接 update
             if vo_id not in result_dict:
                 result_dict.update({
@@ -558,15 +573,15 @@ class GenshinVoice(object):
             14: 'JoinTeam',
             16: 'Card'
         }
-        type_id = int(lut_v.get('KLMMKIHGILG'))
+        type_id = int(lut_v.get('DDGNNKAFNFF'))
 
         if type_dict[type_id] == type:
-            if not lut_v.get('GICGJIENHMH'):
+            if not lut_v.get('AHBLPBNEGFI'):
                 return
             sort_index[str(lut_k)] = {
                 "itemFileID": int(lut_v['fileID']),
                 "voiceType": str(type),
-                "gameTriggerArgs": int(lut_v['GICGJIENHMH'])
+                "gameTriggerArgs": int(lut_v['AHBLPBNEGFI'])
             }
 
     def lut_index_item(self, lut_part: dict, item_part: dict):
