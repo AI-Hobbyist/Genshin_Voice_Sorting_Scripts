@@ -33,7 +33,6 @@ class GenshinVoice(object):
 
         # 语音分类解析
         for k, v in dict(lut_dict).items():
-            print(lut_dict)
             if v.get('KLMMKIHGILG'):
                 self.lut_type_sorting(k, v, 'Fetter', fetter_index)
                 self.lut_type_sorting(k, v, 'Dialog', dialog_index)
