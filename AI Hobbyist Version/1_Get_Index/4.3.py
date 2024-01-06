@@ -34,12 +34,11 @@ class GenshinVoice(object):
         # 语音分类解析
         for k, v in dict(lut_dict).items():
             if v.get('DDGNNKAFNFF'):
-                print(v)
                 self.lut_type_sorting(k, v, 'Fetter', fetter_index)
                 self.lut_type_sorting(k, v, 'Dialog', dialog_index)
                 self.lut_type_sorting(k, v, 'DungeonReminder', reminder_index)
                 self.lut_type_sorting(k, v, 'Card', card_index)
-                
+
         self.create_fetter_index(avatar_dict, fetter_index)
         self.create_dialog_index(npc_dict, dialog_index)
         self.create_reminder_index(npc_dict, reminder_index)
@@ -56,9 +55,6 @@ class GenshinVoice(object):
         return
 
     def create_fetter_index(self, avatar: dict, data: dict):
-        debugdata = json.dumps(avatar,indent = 4, ensure_ascii=False)
-        Path('./debug.json').write_text(debugdata,encoding='utf8')
-
         _item_index = dict()
         _fetter_index = defaultdict(list)
 
@@ -137,6 +133,7 @@ class GenshinVoice(object):
                     }
                 })
         self.get_quest_voice(_dialog_index)
+        self.get_quest_voice_add(_dialog_index)
 
         data.clear()
         for k, v in _item_index.items():
@@ -273,7 +270,7 @@ class GenshinVoice(object):
         for i in card_config_list:
             if i.get('PDNENGPCKKL'):
                 voice_id = i.get('PDNENGPCKKL')
-                avatar_id = list(i.get('IHLOECKCMGE'))[0]
+                avatar_id = list(i.get('JKPKBLJAMAG'))[0]
                 # 过滤掉非主要角色的语音
                 if avatar_id not in avatar:
                     continue
@@ -443,17 +440,17 @@ class GenshinVoice(object):
             if v.get('GameTrigger'):
                 vo_id = v.get('gameTriggerArgs')
                 vo_type = v.get('GameTrigger')
-                vo_source = v.get('sourceFileName')
+                vo_source = v.get('SourceNames')
 
             elif v.get('BFKCDJLLGNJ'):
                 vo_id = v.get('FMHLBONJKPJ')
                 vo_type = v.get('BFKCDJLLGNJ')
-                vo_source = v.get('CBGLAJNLFCB')
-            
+                vo_source = v.get('OFEEIPOMNKD')
+
             elif v.get('BEHKGKMMAPD'):
                 vo_id = v.get('FFDHLEAFBLM')
                 vo_type = v.get('BEHKGKMMAPD')
-                vo_source = v.get('HLGOMILNFNK')
+                vo_source = v.get('EIKJKDICKMJ')
 
             if vo_id == None or vo_source == None:
                 continue
@@ -463,20 +460,16 @@ class GenshinVoice(object):
                     del d['emotion']
                 if 'rate' in d:
                     del d['rate']
-                if 'NNBGHAJLJLA' in d:
-                    del d['NNBGHAJLJLA']
-                    del d['EJNOJBCBJPP']
-                    d['sourceFileName'] = d.get('HLGOMILNFNK')
-                    d['avatarName'] = d.get('KAGFOFEDGIA')
-                    del d['HLGOMILNFNK']
-                    del d['KAGFOFEDGIA']
-                if 'GCAGMFHFFML' in d:
-                    del d['GCAGMFHFFML']
-                    del d['HBDMHPLJGBG']
+                if 'HBDMHPLJGBG' in d:
+                    del d['HBDMHPLJGBG'] ; del d['GCAGMFHFFML']
                     d['sourceFileName'] = d.get('CBGLAJNLFCB')
                     d['avatarName'] = d.get('GJMDHCLJGHH')
-                    del d['CBGLAJNLFCB']
-                    del d['GJMDHCLJGHH']            
+                    del d['CBGLAJNLFCB'] ; del d['GJMDHCLJGHH']
+                if 'NNBGHAJLJLA' in d:
+                    del d['NNBGHAJLJLA'] ; del d['EJNOJBCBJPP']
+                    d['sourceFileName'] = d.get('HLGOMILNFNK')
+                    d['avatarName'] = d.get('KAGFOFEDGIA')
+                    del d['HLGOMILNFNK'] ; del d['KAGFOFEDGIA']      
             # 如果不存在重名键，直接 update
             if vo_id not in result_dict:
                 result_dict.update({
@@ -502,6 +495,11 @@ class GenshinVoice(object):
         for file in os.listdir(item_dir):
             if file.endswith('.json'):
                 item_path_list.append(os.path.join(item_dir, file))
+        # BinOutput/Voice/ 目录下的散装文件
+        item_dir_issue = f"{self.path}/BinOutput/Voice"
+        for file in os.listdir(item_dir_issue):
+            if file.endswith('.json'):
+                item_path_list.append(f"{self.path}/BinOutput/Voice/{file}")
 
         for i in item_path_list:
             result = self.get_item_dict_in(i)
@@ -529,19 +527,19 @@ class GenshinVoice(object):
         由于 /ExcelBinOutput/DialogExcelConfigData.json 缺少部分新版本语音\n
         此方法读取所有任务数据，分析带有语音和文本的条目
         """
-        quest_dir = os.path.join(self.path, './BinOutput/CodexQuest')
+        quest_dir = f"{self.path}/BinOutput/CodexQuest"
         quests_path = []
         for file in os.listdir(quest_dir):
             if file.endswith('.json'):
-                quests_path.append(os.path.join(quest_dir, file))
+                quests_path.append(f"{quest_dir}/{file}")
         
         for path in quests_path:
             with open(path, encoding="utf-8") as f:
                 quest = dict(json.load(f))
 
-            if not quest.get("subQuests"):
-                continue
             subquests = quest.get("subQuests")
+            if subquests is None:
+                continue
             for sub in subquests:
                 if not sub.get("items"):
                     continue
@@ -561,6 +559,37 @@ class GenshinVoice(object):
                             "voiceContentTextMapHash": vo_texthash
                     }})
 
+    def get_quest_voice_add(self, dialog_data: dict):
+        """
+        由于缺少新版本【活动】语音，此方法为读取 dialog 类型语音 id 及其文本的方法。
+        【原神 4.3】版本新增
+        """
+        quest_dir = f"{self.path}/BinOutput/Talk/Quest"
+        quests_path = []
+        for file in os.listdir(quest_dir):
+            if file.endswith('.json'):
+                quests_path.append(f"{quest_dir}/{file}")
+
+        for path in quests_path:
+            with open(path, encoding="utf-8") as f:
+                quest = dict(json.load(f))
+
+            if quest.get("talkId") is None:
+                continue
+            dialog_list = quest.get("dialogList")
+            if dialog_list is None:
+                continue
+            for dialog in dialog_list:
+                vo_args = dialog.get("id")
+                vo_texthash = dialog.get("talkContentTextMapHash")
+                talk_role = dialog.get("talkRole").get("id")
+
+                dialog_data.update({
+                        vo_args: {
+                            "talkNpcID": talk_role,
+                            "voiceContentTextMapHash": vo_texthash
+                    }})
+
     def lut_type_sorting(self, lut_k, lut_v, type: str, sort_index: dict):
         """用于在 main 循环里，根据语音 type str 分类解析到对应的字典中"""
 
@@ -575,6 +604,7 @@ class GenshinVoice(object):
         }
         type_id = int(lut_v.get('DDGNNKAFNFF'))
 
+        # key name: GameTrigger
         if type_dict[type_id] == type:
             if not lut_v.get('AHBLPBNEGFI'):
                 return
