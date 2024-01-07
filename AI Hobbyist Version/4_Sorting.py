@@ -9,32 +9,20 @@ from shutil import copy, move
 from pathlib import Path
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--source', type=str, help='未整理数据集目录', required=True)
-parser.add_argument('--ver', type=str, help='版本', required=True)
-parser.add_argument('--dest', type=str, help='目标路径', required=True)
-parser.add_argument('--lang', type=str,
-                    help='语言（可选CHS/EN/JP/KR）', required=True)
-parser.add_argument('--mode', type=str, help='模式(复制(cp)/移动(mv))', default="cp")
+parser.add_argument('-src','--source', type=str, help='未整理数据集目录', required=True)
+parser.add_argument('-ver','--version', type=str, help='版本', required=True)
+parser.add_argument('-dst','--destination', type=str, help='目标路径', required=True)
+parser.add_argument('-lang','--language', type=str, help='语言（可选CHS/EN/JP/KR）', required=True)
+parser.add_argument('-m','--mode', type=str, help='模式(复制(cp)/移动(mv))', default="cp")
 args = parser.parse_args()
 
 source = str(args.source)
-dest = str(args.dest)
-language = str(args.lang).upper()
-ver = str(args.ver)
+dest = str(args.destination)
+language = str(args.language).upper()
+ver = str(args.version)
 mode = str(args.mode)
 player = '旅行者|旅人|Traveler|여행자'
 
-renameDict = {
-    '万叶': '枫原万叶',
-    "#{REALNAME[ID(1)|HOSTONLY(true)]}": '流浪者',
-    '影': '雷电将军',
-    '「公子」': '达达利亚',
-    '公子': '达达利亚',
-    '散兵': '流浪者',
-    '「散兵」': '流浪者',
-    '幽夜菲谢尔': '菲谢尔',
-    '绿色的家伙': '温迪',
-}
 
 
 def is_in(full_path, regx):
@@ -108,16 +96,14 @@ def ren_player(player, lang):
     return p_name
 
 
-f = open(f'./Indexs/{ver}/{langcode}.json', encoding='utf8')
-data = json.load(f)
+indexfile = Path(f'./Indexs/{ver}/{langcode}.json').read_text(encoding="utf-8")
+data = json.load(indexfile)
 for k in tqdm(data.keys()):
     try:
         text = data.get(k).get('voiceContent')
         char_name = data.get(k).get('talkName')
         avatar_name = data.get(k).get('avatarName')
         if char_name is not None:
-            if char_name in renameDict:
-                char_name = renameDict[char_name]
             if is_in(char_name, player) == True:
                 char_name = ren_player(avatar_name, langcode)
         path = data.get(k).get('sourceFileName')
@@ -140,4 +126,3 @@ for k in tqdm(data.keys()):
                     exit()
     except:
         pass
-f.close()

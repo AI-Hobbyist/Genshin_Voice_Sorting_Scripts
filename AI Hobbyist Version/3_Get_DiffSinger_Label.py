@@ -4,30 +4,17 @@ from pathlib import Path
 from glob import glob
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--source', type=str, help='未整理数据集目录', required=True)
-parser.add_argument('--ver', type=str, help='版本', required=True)
-parser.add_argument('--dest', type=str, help='目标路径', required=True)
-parser.add_argument('--lang', type=str, help='语言（可选CHS/EN/JP/KR）', required=True)
+parser.add_argument('-src','--source', type=str, help='未整理数据集目录', required=True)
+parser.add_argument('-ver','--version', type=str, help='版本', required=True)
+parser.add_argument('-dst','--destination', type=str, help='目标路径', required=True)
+parser.add_argument('-lang','--language', type=str, help='语言（可选CHS/EN/JP/KR）', required=True)
 args = parser.parse_args()
 
 source = str(args.source)
-dest = str(args.dest)
-language = str(args.lang).upper()
-ver = str(args.ver)
+dest = str(args.destination)
+language = str(args.language).upper()
+ver = str(args.version)
 player = '旅行者|旅人|Traveler|여행자'
-
-
-renameDict = {
-    '万叶': '枫原万叶',
-    "#{REALNAME[ID(1)|HOSTONLY(true)]}": '流浪者',
-    '影': '雷电将军',
-    '「公子」': '达达利亚',
-    '公子': '达达利亚',
-    '散兵': '流浪者',
-    '「散兵」': '流浪者',
-    '幽夜菲谢尔': '菲谢尔',
-    '绿色的家伙': '温迪',
-}
 
 def is_in(full_path, regx):
     if re.findall(regx, full_path):
@@ -92,16 +79,14 @@ def ren_player(player,lang):
         p_name = player
     return p_name
 
-f = open(f'./Indexs/{ver}/{langcode}.json', encoding='utf8')
-data = json.load(f)
+indexfile = Path(f'./Indexs/{ver}/{langcode}.json').read_text(encoding="utf-8")
+data = json.load(indexfile)
 for k in tqdm(data.keys()):
     try:
         text = data.get(k).get('voiceContent')
         char_name = data.get(k).get('talkName')
         avatar_name = data.get(k).get('avatarName')
         if char_name is not None:
-            if char_name in renameDict:
-                char_name = renameDict[char_name]
             if is_in(char_name, player) == True:
                 char_name = ren_player(avatar_name,langcode)
         path = data.get(k).get('sourceFileName')
@@ -113,11 +98,9 @@ for k in tqdm(data.keys()):
             lab_file = wav_file.replace(".wav",".lab")
             vo_lab_path = f"{vo_dest_dir}/{lab_file}"
             if is_file(wav_source) == True:
-                if is_in(path, battle) == True:
-                    if not os.path.exists(vo_dest_dir):
-                       Path(f"{vo_dest_dir}").mkdir(parents=True)
-                    dest_path = vo_lab_path            
+                if not os.path.exists(vo_dest_dir):
+                    Path(f"{vo_dest_dir}").mkdir(parents=True)
+                dest_path = vo_lab_path            
                 Path(dest_path).write_text(text, encoding='utf-8')
     except:
         pass
-f.close()
