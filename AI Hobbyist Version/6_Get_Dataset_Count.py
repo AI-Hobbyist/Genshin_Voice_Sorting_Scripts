@@ -30,7 +30,7 @@ def write_csv(path, output_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='统计指定目录下所有的文件夹中的wav数量，wav总时长，lab标注数量，并写入csv表格')
-    parser.add_argument('--path', type=str, help='源目录')
-    parser.add_argument('--output_path', type=str, help='csv输出目录')
+    parser.add_argument('-src','--input_path', type=str, help='源目录')
+    parser.add_argument('-dst','--output_path', type=str, help='csv输出目录')
     args = parser.parse_args()
-    write_csv(args.path, args.output_path)
+    write_csv(args.input_path, args.output_path)
