@@ -14,9 +14,6 @@ source = str(args.source)
 dest = str(args.dest)
 language = str(args.lang).upper()
 ver = str(args.ver)
-monster = 'monster'
-battle = 'battle|life'
-conv = 'fetter'
 player = '旅行者|旅人|Traveler|여행자'
 
 
@@ -43,13 +40,6 @@ def is_file(full_path):
         return True
     else:
         return  False
-
-def has_vaild_content(text):
-    pattern = r'[a-zA-Z0-9\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]+'
-    if re.search(pattern, text):
-        return True
-    else:
-        return False
     
 def get_support_ver():
     indexs = glob('./Indexs/*')
@@ -119,35 +109,11 @@ for k in tqdm(data.keys()):
         wav_source = source + '/' + path
         wav_file = os.path.basename(path)
         if char_name is not None:
-            vo_dest_dir = f"{dest}/{dest_lang}/角色语音 - Character/{char_name}"
-            bt_dest_dir = f"{dest}/{dest_lang}/战斗语音 - Battle/{char_name}"
-            cv_dest_dir = f"{dest}/{dest_lang}/多人对话 - Conversation/{char_name}"
-            mo_dest_dir = f"{dest}/{dest_lang}/怪物语音 - Monster/{char_name}"
-            ot_dest_dir = f"{dest}/{dest_lang}/其它语音 - Others/{char_name}"
+            vo_dest_dir = f"{dest}/{dest_lang}/数据集 - Datasets/{char_name}"
             lab_file = wav_file.replace(".wav",".lab")
             vo_lab_path = f"{vo_dest_dir}/{lab_file}"
-            bt_lab_path = f"{bt_dest_dir}/{lab_file}"
-            cv_lab_path = f"{cv_dest_dir}/{lab_file}"
-            mo_lab_path = f"{mo_dest_dir}/{lab_file}"
-            ot_lab_path = f"{ot_dest_dir}/{lab_file}"
             if is_file(wav_source) == True:
                 if is_in(path, battle) == True:
-                    if not os.path.exists(bt_dest_dir):
-                       Path(f"{bt_dest_dir}").mkdir(parents=True)
-                    dest_path = bt_lab_path
-                elif is_in(path, conv) == True:
-                    if not os.path.exists(cv_dest_dir):
-                       Path(f"{cv_dest_dir}").mkdir(parents=True)
-                    dest_path = cv_lab_path
-                elif is_in(path,monster) == True:
-                    if not os.path.exists(mo_dest_dir):
-                       Path(f"{mo_dest_dir}").mkdir(parents=True)
-                    dest_path = mo_lab_path
-                elif has_vaild_content(text) == False:
-                    if not os.path.exists(ot_dest_dir):
-                       Path(f"{ot_dest_dir}").mkdir(parents=True)
-                    dest_path = ot_lab_path
-                else:
                     if not os.path.exists(vo_dest_dir):
                        Path(f"{vo_dest_dir}").mkdir(parents=True)
                     dest_path = vo_lab_path            
