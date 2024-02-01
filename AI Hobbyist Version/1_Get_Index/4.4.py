@@ -4,6 +4,8 @@ import argparse
 from pathlib import Path
 from collections import defaultdict
 from fnvhash import fnv1_64
+from utils.ExceptionAyz import fatal_analyzer
+from rich.progress import track
 
 class GenshinVoice(object):
     def __init__(self, git_path: str, output_path: str, lang: str):
@@ -15,7 +17,7 @@ class GenshinVoice(object):
             f"./TextMap/TextMap{self.lang}.json"
         ))
         self.vo_item = self.get_item_dict_sort()
-
+    @fatal_analyzer
     def main(self):
         # 变量申明
         (fetter_index,
@@ -95,13 +97,18 @@ class GenshinVoice(object):
             item_list = _item_index.get(int(k))
             item_switch_list = [d.get('avatarName').lower() for d in item_list]
             fetter_switch_list = [d.get('avatarSwitch').lower() for d in v]
-
             for list_seq, fetter_switch in enumerate(fetter_switch_list):
-                # 从 fetter 中拿 switch 到 item 中匹配相同的 switch
-                # if fetter_switch in item_switch_list:
-                seq = item_switch_list.index(fetter_switch)
-                source_file_name = item_list[seq].get('sourceFileName')
-                v[list_seq].update(sourceFileName=source_file_name)
+                try:
+                    seq = item_switch_list.index(fetter_switch)
+                    source_file_name = item_list[seq].get('sourceFileName')
+                    v[list_seq].update(sourceFileName=source_file_name)
+                except ValueError:
+                    # 当 fetter_switch 不在 item_switch_list 中时执行的操作
+                    fetter_switch = item_switch_list[0]
+                    seq = item_switch_list.index(fetter_switch)
+                    source_file_name = item_list[seq].get('sourceFileName')
+                    v[list_seq].update(sourceFileName=source_file_name)
+
 
         # 生成 fnv164 hash 索引
         data.clear()
@@ -342,7 +349,7 @@ class GenshinVoice(object):
         )
 
         for i in avatar_config_list:
-            # 4.2~4.3 补丁（很生硬）
+            # 4.2 补丁（很生硬）
             name_to_switch = {
                 "PlayerBoy": "Switch_hero",
                 "PlayerGirl": "Switch_heroine",
@@ -571,7 +578,7 @@ class GenshinVoice(object):
             if file.endswith('.json'):
                 quests_path.append(f"{quest_dir}/{file}")
 
-        for path in quests_path:
+        for path in track(quests_path,description="语音索引生成中..."):
             with open(path, encoding="utf-8") as f:
                 quest = dict(json.load(f))
 
@@ -670,5 +677,5 @@ if __name__ == '__main__':
     parser.add_argument('--dest', type=str, help='目标路径，可选，默认为数据文件夹根目录', default='./')
     parser.add_argument('--lang', type=str, help='语言，可选 CHS/EN/JP/KR，默认为 CHS', default='CHS')
     args = parser.parse_args()
-
+    
     GenshinVoice(args.source, args.dest, args.lang).main()
