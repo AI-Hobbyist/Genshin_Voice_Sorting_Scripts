@@ -342,7 +342,7 @@ class GenshinVoice(object):
         )
 
         for i in avatar_config_list:
-            # 4.2 补丁（很生硬）
+            # 4.2/4.3 补丁（很生硬）
             name_to_switch = {
                 "PlayerBoy": "Switch_hero",
                 "PlayerGirl": "Switch_heroine",
@@ -356,7 +356,8 @@ class GenshinVoice(object):
                 "Momoka": "Switch_Kirara",
                 "Liney": "Switch_Lyney",
                 "Linette": "Switch_Lynette",
-                "Heizo": "Switch_Heizou"
+                "Heizo": "Switch_Heizou",
+                "Liuyun": "Switch_Xianyun"
             }
             # 分割游戏内头像名称，偷鸡角色名
             name = str(i.get('iconName')).split('_')[-1]
