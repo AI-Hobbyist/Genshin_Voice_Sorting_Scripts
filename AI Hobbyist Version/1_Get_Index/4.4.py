@@ -342,7 +342,7 @@ class GenshinVoice(object):
         )
 
         for i in avatar_config_list:
-            # 4.2/4.3 补丁（很生硬）
+            # 4.2~4.3 补丁（很生硬）
             name_to_switch = {
                 "PlayerBoy": "Switch_hero",
                 "PlayerGirl": "Switch_heroine",
