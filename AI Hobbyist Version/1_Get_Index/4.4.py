@@ -17,6 +17,7 @@ class GenshinVoice(object):
             f"./TextMap/TextMap{self.lang}.json"
         ))
         self.vo_item = self.get_item_dict_sort()
+
     @fatal_analyzer
     def main(self):
         # 变量申明
@@ -29,16 +30,21 @@ class GenshinVoice(object):
         lut_dict = dict(self.input_json(
             './BinOutput/Voice/Lut/Lut.json'
         ))
+
         # 主要角色 ID 索引
         avatar_dict = self.create_avatar_index()
         npc_dict = self.create_npc_index(avatar_dict)
 
         # 语音分类解析
         for k, v in dict(lut_dict).items():
+            # key name: GameTrigger
             if v.get('IFMNCCKMMFP'):
-                self.lut_type_sorting(k, v, 'Fetter', fetter_index)
-                self.lut_type_sorting(k, v, 'Dialog', dialog_index)
-                self.lut_type_sorting(k, v, 'DungeonReminder', reminder_index)
+                if self.lut_type_sorting(k, v, 'Fetter', fetter_index):
+                    continue
+                if self.lut_type_sorting(k, v, 'Dialog', dialog_index):
+                    continue
+                if self.lut_type_sorting(k, v, 'DungeonReminder', reminder_index):
+                    continue
                 self.lut_type_sorting(k, v, 'Card', card_index)
 
         self.create_fetter_index(avatar_dict, fetter_index)
@@ -97,18 +103,13 @@ class GenshinVoice(object):
             item_list = _item_index.get(int(k))
             item_switch_list = [d.get('avatarName').lower() for d in item_list]
             fetter_switch_list = [d.get('avatarSwitch').lower() for d in v]
-            for list_seq, fetter_switch in enumerate(fetter_switch_list):
-                try:
-                    seq = item_switch_list.index(fetter_switch)
-                    source_file_name = item_list[seq].get('sourceFileName')
-                    v[list_seq].update(sourceFileName=source_file_name)
-                except ValueError:
-                    # 当 fetter_switch 不在 item_switch_list 中时执行的操作
-                    fetter_switch = item_switch_list[0]
-                    seq = item_switch_list.index(fetter_switch)
-                    source_file_name = item_list[seq].get('sourceFileName')
-                    v[list_seq].update(sourceFileName=source_file_name)
 
+            for list_seq, fetter_switch in enumerate(fetter_switch_list):
+                # 从 fetter 中拿 switch 到 item 中匹配相同的 switch
+                # 此处不使用 try-except，用于检查新角色 switch 的正确性
+                seq = item_switch_list.index(fetter_switch)
+                source_file_name = item_list[seq].get('sourceFileName')
+                v[list_seq].update(sourceFileName=source_file_name)
 
         # 生成 fnv164 hash 索引
         data.clear()
@@ -364,8 +365,16 @@ class GenshinVoice(object):
                 "Liney": "Switch_Lyney",
                 "Linette": "Switch_Lynette",
                 "Heizo": "Switch_Heizou",
-                "Liuyun": "Switch_Xianyun"
+                "Liuyun": "Switch_Xianyun",
             }
+
+            """
+            通常情况下，name 变量即为 voice_switch 变量中的名字后缀，但一些角色是例外
+            如有新角色触发例外，会触发 ValueError，此时应该到此目录下查找对应关系：
+            /BinOutput/Avatar
+            文件名如 ConfigAvatar_Liuyun.json，Liuyun 即为 name
+            该文件中查找关键字 switch，即可找到 voice_switch
+            """
             # 分割游戏内头像名称，偷鸡角色名
             name = str(i.get('iconName')).split('_')[-1]
             if name in name_to_switch.keys():
@@ -465,19 +474,19 @@ class GenshinVoice(object):
             # SoureName 中无效键值对清洗
             for d in vo_source:
                 if 'emotion' in d:
-                    del d['emotion']
-                if 'rate' in d:
-                    del d['rate']
+                    del d['emotion'] ; del d['rate']
+
                 if 'HBDMHPLJGBG' in d:
                     del d['HBDMHPLJGBG'] ; del d['GCAGMFHFFML']
                     d['sourceFileName'] = d.get('CBGLAJNLFCB')
                     d['avatarName'] = d.get('GJMDHCLJGHH')
                     del d['CBGLAJNLFCB'] ; del d['GJMDHCLJGHH']
+
                 if 'NNBGHAJLJLA' in d:
                     del d['NNBGHAJLJLA'] ; del d['EJNOJBCBJPP']
                     d['sourceFileName'] = d.get('HLGOMILNFNK')
                     d['avatarName'] = d.get('KAGFOFEDGIA')
-                    del d['HLGOMILNFNK'] ; del d['KAGFOFEDGIA']      
+                    del d['HLGOMILNFNK'] ; del d['KAGFOFEDGIA']
             # 如果不存在重名键，直接 update
             if vo_id not in result_dict:
                 result_dict.update({
@@ -569,14 +578,17 @@ class GenshinVoice(object):
 
     def get_quest_voice_add(self, dialog_data: dict):
         """
-        由于缺少新版本【活动】语音，此方法为读取 dialog 类型语音 id 及其文本的方法。
-        【原神 4.3】版本新增
+        此方法用于补充缺少的版本活动语音。\n
+        语音类型：dialog
         """
-        quest_dir = f"{self.path}/BinOutput/Talk/Quest"
+        quest_dirs = [f"{self.path}/BinOutput/Talk/Quest",
+                      f"{self.path}/BinOutput/Talk/FreeGroup"]
         quests_path = []
-        for file in os.listdir(quest_dir):
-            if file.endswith('.json'):
-                quests_path.append(f"{quest_dir}/{file}")
+
+        for quest_dir in quest_dirs:
+            for file in os.listdir(quest_dir):
+                if file.endswith('.json'):
+                    quests_path.append(f"{quest_dir}/{file}")
 
         for path in track(quests_path,description="语音索引生成中..."):
             with open(path, encoding="utf-8") as f:
@@ -607,22 +619,25 @@ class GenshinVoice(object):
             6: 'DungeonReminder',
             8: 'AnimatorEvent',
             10: 'Fetter',
-            12: 'Unknown',
             14: 'JoinTeam',
-            16: 'Card',
-            18: 'Unknown'
+            16: 'Card'
         }
+        # 递入的未分类语音类型 id
         type_id = int(lut_v.get('IFMNCCKMMFP'))
 
+        # 如果未分类的语音类型与当前目标类型桶相符，则并入
         # key name: GameTrigger
-        if type_dict[type_id] == type:
+        if type_dict.get(type_id) == type:
             if not lut_v.get('BNBBCCOCGGA'):
-                return
+                return False
             sort_index[str(lut_k)] = {
                 "itemFileID": int(lut_v['fileID']),
                 "voiceType": str(type),
                 "gameTriggerArgs": int(lut_v['BNBBCCOCGGA'])
             }
+            return True
+        else:
+            return False
 
     def lut_index_item(self, lut_part: dict, item_part: dict):
         """
