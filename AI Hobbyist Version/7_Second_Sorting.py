@@ -15,7 +15,8 @@ monster = 'monster'
 battle = 'battle|life'
 conv = 'fetter'
 vaild_content = r'[a-zA-Z0-9\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]+'
-placeholder = r'[<>{}]'
+placeholder = r'[{}]'
+tags = r'[<>]'
 
 labfiles = glob(f"{source}/**/*.lab")
 
@@ -36,6 +37,11 @@ def check_content(text, regx):
         return True
     else:
         return False
+    
+def tag_content(text):
+    res = re.findall(r'(<.*?>)', text)
+    string = '、'.join(res)
+    return string
 
 for file in tqdm(labfiles):
     lab_content = Path(file).read_text(encoding='utf-8')
@@ -43,6 +49,11 @@ for file in tqdm(labfiles):
     lab_file_name = os.path.basename(file)
     wav_file_name = lab_file_name.replace(".lab",".wav")
     src = f"{source}/{spk}"
+    if check_content(lab_content,tags):
+        labels = re.sub(r'<.*?>', '', lab_content)
+        lab_path = f"{src}/{lab_file_name}"
+        Path(lab_path).write_text(labels,encoding='utf-8')
+        tqdm.write(f"已清除标注文件 {src}/{lab_file_name} 中的html标签：{tag_content(lab_content)}\n-----------")
     if not check_content(lab_content,vaild_content):
         out_path = f"{dest}/其它语音 - Others/{spk}"
     elif is_in(file,conv):
