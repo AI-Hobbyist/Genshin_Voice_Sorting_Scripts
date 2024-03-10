@@ -11,7 +11,7 @@ def get_wav_info(path):
     lab_files = []
     for root, dirs, files in os.walk(path):
         folder =  os.path.basename(root)
-        for file in tqdm(files,leave=(files==100),desc=f"正在统计目录 [{folder}] 的数据时长"):
+        for file in tqdm(files,leave=False,desc=f"正在统计目录 [{folder}] 的数据时长"):
             if file.endswith('.wav'):
                 wav_files.append(os.path.join(root, file))
                 total_duration += AudioSegment.from_file(os.path.join(root, file)).duration_seconds
