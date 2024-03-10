@@ -10,7 +10,8 @@ def get_wav_info(path):
     total_duration = 0
     lab_files = []
     for root, dirs, files in os.walk(path):
-        for file in files:
+        folder =  os.path.basename(root)
+        for file in tqdm(files,leave=(files==100),desc=f"正在统计目录 [{folder}] 的数据时长"):
             if file.endswith('.wav'):
                 wav_files.append(os.path.join(root, file))
                 total_duration += AudioSegment.from_file(os.path.join(root, file)).duration_seconds
@@ -24,7 +25,7 @@ def write_csv(path, output_path):
         writer = csv.writer(csvfile)
         writer.writerow(['角色名', '总时长(时:分:秒.毫秒)', '音频数量', '标注数量'])
         for root, dirs, files in os.walk(path):
-            for dir in tqdm(dirs):
+            for dir in tqdm(dirs,position=1,dynamic_ncols=True,leave=True,desc=f"当前统计进度"):
                 wav_files, total_duration, wav_count, lab_count = get_wav_info(os.path.join(root, dir))
                 writer.writerow([dir, total_duration, wav_count, lab_count])
 
