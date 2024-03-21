@@ -1,0 +1,14 @@
+函数 main 发生了致命错误: 
+错误类型: TypeError 
+错误信息: 'NoneType' object is not iterable 
+异常追踪信息: 
+Traceback (most recent call last):
+  File "D:\Samples\AI相关\组织项目\Genshin_Voice_Sorting_Scripts\AI Hobbyist Version\1_Get_Index\utils\ExceptionAyz.py", line 6, in wrapper
+    return func(*args, **kwargs)
+  File "D:\Samples\AI相关\组织项目\Genshin_Voice_Sorting_Scripts\AI Hobbyist Version\1_Get_Index\4.5.py", line 50, in main
+    self.create_fetter_index(avatar_dict, fetter_index)
+  File "D:\Samples\AI相关\组织项目\Genshin_Voice_Sorting_Scripts\AI Hobbyist Version\1_Get_Index\4.5.py", line 104, in create_fetter_index
+    item_switch_list = [d.get('avatarName').lower() for d in item_list]
+TypeError: 'NoneType' object is not iterable
+异常追踪结束. 
+===========================================
