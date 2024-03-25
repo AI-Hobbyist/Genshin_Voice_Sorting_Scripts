@@ -58,10 +58,8 @@ class GenshinVoice(object):
         return
 
     def create_fetter_index(self, avatar: dict, data: dict):
-        _item_index = dict()
         _fetter_index = defaultdict(list)
 
-        _item_index = copy.deepcopy(data)
         fetters_config_list = self.input_json(
             './ExcelBinOutput/FettersExcelConfigData.json'
         )
@@ -94,7 +92,7 @@ class GenshinVoice(object):
         for k, v in _fetter_index.items():
             # 当前 args 的 item list
             # 数据类型：列表「v；*_list」；字典「d；*_index」
-            item_list = _item_index.get(int(k))
+            item_list = data.get(int(k))
             item_switch_list = [d.get('avatarName').lower() for d in item_list]
             fetter_switch_list = [d.get('avatarSwitch').lower() for d in v]
 
@@ -115,9 +113,9 @@ class GenshinVoice(object):
                 })
 
     def create_dialog_index(self, npc: dict, data: dict):
-        _item_index, _dialog_index = {}, {}
-
+        _dialog_index = {}
         _item_index = copy.deepcopy(data)
+
         dialog_config_list = self.input_json(
             './ExcelBinOutput/DialogExcelConfigData.json'
         )
@@ -190,9 +188,9 @@ class GenshinVoice(object):
                 continue
 
     def create_reminder_index(self, npc: dict, data: dict):
-        _item_index, _reminder_index = {}, {}
-
+        _reminder_index = {}
         _item_index = copy.deepcopy(data)
+
         reminder_config_list = self.input_json(
             './ExcelBinOutput/ReminderExcelConfigData.json'
         )
@@ -258,8 +256,7 @@ class GenshinVoice(object):
                 continue
 
     def create_card_index(self, avatar: dict, data: dict):
-        _item_index, _card_index = {}, {}
-
+        _card_index = {}
         _item_index = copy.deepcopy(data)
         card_config_list = self.input_json(
             './ExcelBinOutput/GCGTalkDetailExcelConfigData.json'
@@ -434,7 +431,7 @@ class GenshinVoice(object):
             i = lang_code.index(self.lang)
             vo_lang = vo_lang_name[i]
         except:
-            raise ValueError('language code has mistake')
+            raise ValueError('Language code is not supported.')
         return vo_lang
 
     def get_item_dict_in(self, path: str):
@@ -442,11 +439,14 @@ class GenshinVoice(object):
         专门用于读取 {item}.json 的 input_json 方法变种\n
         直接把 BinOutpt/Voice/Items 目录下所有文件加载进来
         """
+        result_dict = {}
         with open(path, encoding="utf-8") as f:
             item_dict = dict(json.load(f))
-        # 返回结果申明
-        result_dict = {}
-        for v in item_dict.values():
+
+        item_dict = self.check_item_keys(item_dict)
+        assert item_dict != False, path
+
+        for v in item_dict:
             # 如果语音索引 id 不存在，就跳过
             if v.get('GameTrigger'):
                 vo_id = v.get('gameTriggerArgs')
@@ -470,16 +470,17 @@ class GenshinVoice(object):
                 if 'emotion' in d:
                     del d['emotion'] ; del d['rate']
 
-                if 'HBDMHPLJGBG' in d:
-                    del d['HBDMHPLJGBG'] ; del d['GCAGMFHFFML']
+                elif 'HBDMHPLJGBG' in d:
                     d['sourceFileName'] = d.get('CBGLAJNLFCB')
                     d['avatarName'] = d.get('GJMDHCLJGHH')
+                    # del emotion ; del rate
+                    del d['HBDMHPLJGBG'] ; del d['GCAGMFHFFML']
                     del d['CBGLAJNLFCB'] ; del d['GJMDHCLJGHH']
 
-                if 'NNBGHAJLJLA' in d:
-                    del d['NNBGHAJLJLA'] ; del d['EJNOJBCBJPP']
+                elif 'NNBGHAJLJLA' in d:
                     d['sourceFileName'] = d.get('HLGOMILNFNK')
                     d['avatarName'] = d.get('KAGFOFEDGIA')
+                    del d['NNBGHAJLJLA'] ; del d['EJNOJBCBJPP']
                     del d['HLGOMILNFNK'] ; del d['KAGFOFEDGIA']
             # 如果不存在重名键，直接 update
             if vo_id not in result_dict:
@@ -500,13 +501,13 @@ class GenshinVoice(object):
         索引出全部 item.json 的 voice id 和 source name
         """
         voice_item = {}
-        # 创建 {item}.json 的路径列表
+        # 遍历 ./BinOutput/Voice/Items 目录下的文件路径
         item_dir = os.path.join(self.path, './BinOutput/Voice/Items')
         item_path_list = []
         for file in os.listdir(item_dir):
             if file.endswith('.json'):
                 item_path_list.append(os.path.join(item_dir, file))
-        # BinOutput/Voice/ 目录下的散装文件
+        # ./BinOutput/Voice/ 目录下的零散文件
         item_dir_issue = f"{self.path}/BinOutput/Voice"
         for file in os.listdir(item_dir_issue):
             if file.endswith('.json'):
@@ -599,10 +600,23 @@ class GenshinVoice(object):
                 talk_role = dialog.get("talkRole").get("id")
 
                 dialog_data.update({
-                        vo_args: {
-                            "talkNpcID": talk_role,
-                            "voiceContentTextMapHash": vo_texthash
+                    vo_args: {
+                        "talkNpcID": talk_role,
+                        "voiceContentTextMapHash": vo_texthash
                     }})
+
+    def check_item_keys(self, voice_item: dict):
+        """
+        检查 item.json 是已知的混淆键
+        """
+        known_keys = ['GameTrigger', 'BFKCDJLLGNJ', 'BEHKGKMMAPD']
+        vo_items = voice_item.values()
+        extrace_vo_item = next(iter(voice_item.values()))
+
+        if any(k in known_keys for k in extrace_vo_item):
+            return vo_items
+        else:
+            return False
 
     def sort_voice_type(self, key, value, search_type: str, result: dict):
         """
