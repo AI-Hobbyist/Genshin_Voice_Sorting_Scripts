@@ -1,6 +1,7 @@
 import os
 import json
 import argparse
+import copy
 from pathlib import Path
 from collections import defaultdict
 from fnvhash import fnv1_64
@@ -26,26 +27,20 @@ class GenshinVoice(object):
          reminder_index,
          card_index) = ({}, {}, {}, {})
 
-        # 解包素材加载
-        lut_dict = dict(self.input_json(
-            './BinOutput/Voice/Lut/Lut.json'
-        ))
-
         # 主要角色 ID 索引
         avatar_dict = self.create_avatar_index()
         npc_dict = self.create_npc_index(avatar_dict)
 
         # 语音分类解析
-        for k, v in dict(lut_dict).items():
+        for k, v in self.vo_item.items():
             # key name: GameTrigger
-            if v.get('maxFileNum'):
-                if self.lut_type_sorting(k, v, 'Fetter', fetter_index):
-                    continue
-                if self.lut_type_sorting(k, v, 'Dialog', dialog_index):
-                    continue
-                if self.lut_type_sorting(k, v, 'DungeonReminder', reminder_index):
-                    continue
-                self.lut_type_sorting(k, v, 'Card', card_index)
+            if self.sort_voice_type(k, v, 'Dialog', dialog_index):
+                continue
+            if self.sort_voice_type(k, v, 'Fetter', fetter_index):
+                continue
+            if self.sort_voice_type(k, v, 'DungeonReminder', reminder_index):
+                continue
+            self.sort_voice_type(k, v, 'Card', card_index)
 
         self.create_fetter_index(avatar_dict, fetter_index)
         self.create_dialog_index(npc_dict, dialog_index)
@@ -66,8 +61,7 @@ class GenshinVoice(object):
         _item_index = dict()
         _fetter_index = defaultdict(list)
 
-        self.lut_index_item(data, _item_index)
-
+        _item_index = copy.deepcopy(data)
         fetters_config_list = self.input_json(
             './ExcelBinOutput/FettersExcelConfigData.json'
         )
@@ -123,7 +117,7 @@ class GenshinVoice(object):
     def create_dialog_index(self, npc: dict, data: dict):
         _item_index, _dialog_index = {}, {}
 
-        self.lut_index_item(data, _item_index)
+        _item_index = copy.deepcopy(data)
         dialog_config_list = self.input_json(
             './ExcelBinOutput/DialogExcelConfigData.json'
         )
@@ -198,7 +192,7 @@ class GenshinVoice(object):
     def create_reminder_index(self, npc: dict, data: dict):
         _item_index, _reminder_index = {}, {}
 
-        self.lut_index_item(data, _item_index)
+        _item_index = copy.deepcopy(data)
         reminder_config_list = self.input_json(
             './ExcelBinOutput/ReminderExcelConfigData.json'
         )
@@ -266,7 +260,7 @@ class GenshinVoice(object):
     def create_card_index(self, avatar: dict, data: dict):
         _item_index, _card_index = {}, {}
 
-        self.lut_index_item(data, _item_index)
+        _item_index = copy.deepcopy(data)
         card_config_list = self.input_json(
             './ExcelBinOutput/GCGTalkDetailExcelConfigData.json'
         )
@@ -610,54 +604,17 @@ class GenshinVoice(object):
                             "voiceContentTextMapHash": vo_texthash
                     }})
 
-    def lut_type_sorting(self, lut_k, lut_v, type: str, sort_index: dict):
-        """用于在 main 循环里，根据语音 type str 分类解析到对应的字典中"""
-
-        # 4.2 更新
-        type_dict = {
-            4: 'Dialog',
-            6: 'DungeonReminder',
-            8: 'AnimatorEvent',
-            10: 'Fetter',
-            14: 'JoinTeam',
-            16: 'Card'
-        }
-        # 递入的未分类语音类型 id
-        type_id = int(lut_v.get('maxFileNum'))
-
-        # 如果未分类的语音类型与当前目标类型桶相符，则并入
-        # key name: GameTrigger
-        if type_dict.get(type_id) == type:
-            if not lut_v.get('autoChangeStep'):
-                return False
-            sort_index[str(lut_k)] = {
-                "itemFileID": int(lut_v['minFileNum']),
-                "voiceType": str(type),
-                "gameTriggerArgs": int(lut_v['autoChangeStep'])
-            }
+    def sort_voice_type(self, key, value, search_type: str, result: dict):
+        """
+        对 self.vo_item 以语音类别分类
+        """
+        if search_type in value:
+            result.update({
+                key: value[search_type]
+            })
             return True
         else:
             return False
-
-    def lut_index_item(self, lut_part: dict, item_part: dict):
-        """
-        根据输入的 Lut.json 索引到对应的 vo_item，其中包含了 sourceFileName 字段；\n
-        此方法用于已经在 main 中完成的 type 分类拣选的 Lut 字典；
-        - lut_part 需要进行索引的已分类 Lut 字典；
-        - item_part 索引结果输出字典，此变量应该是一个空字典
-        """
-
-        for v in lut_part.values():
-            vo_id = v.get('gameTriggerArgs')
-            vo_type = v.get('voiceType')
-            if vo_id in self.vo_item:
-                if vo_type in self.vo_item[vo_id]:
-                    item_part.update({
-                        vo_id: self.vo_item[vo_id][vo_type]
-                    })
-                    del self.vo_item[vo_id][vo_type]
-            else:
-                continue
 
     def input_json(self, relative_path: str):
         """
