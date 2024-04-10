@@ -11,4 +11,4 @@
 
 [@Jared-02](https://github.com/Jared-02)
 
-[@KOKOMI12345（芙宁娜）](https://github.com/KOKOMI12345)
+[@KOKOMI12345（花火）](https://github.com/KOKOMI12345)
