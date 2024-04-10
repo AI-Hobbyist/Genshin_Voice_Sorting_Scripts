@@ -108,10 +108,10 @@ for k in tqdm(data.keys()):
                 char_name = ren_player(avatar_name, langcode)
         path = data.get(k).get('sourceFileName')
         path = path.replace(".wem", ".wav")
-        wav_source = source + '/' + path
+        wav_source = f"{source}/{dest_lang}/{path}"
         wav_file = os.path.basename(path)
         if char_name is not None:
-            vo_dest_dir = f"{dest}/{dest_lang}/数据集 - Datasets/{char_name}"
+            vo_dest_dir = f"{dest}/{dest_lang}/{char_name}"
             vo_wav_path = f"{vo_dest_dir}/{wav_file}"
             if is_file(wav_source) == True:
                 if not os.path.exists(vo_dest_dir):
