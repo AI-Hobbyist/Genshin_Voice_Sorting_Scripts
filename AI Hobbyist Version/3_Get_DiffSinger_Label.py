@@ -4,9 +4,9 @@ from pathlib import Path
 from glob import glob
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-src','--source', type=str, help='未整理数据集目录', required=True)
+parser.add_argument('-src','--source', type=str, help='未整理数据集目录', default="./Data/named")
 parser.add_argument('-ver','--version', type=str, help='版本', required=True)
-parser.add_argument('-dst','--destination', type=str, help='目标路径', required=True)
+parser.add_argument('-dst','--destination', type=str, help='目标路径', default="./Data/sorted")
 parser.add_argument('-lang','--language', type=str, help='语言（可选CHS/EN/JP/KR）', required=True)
 args = parser.parse_args()
 
