@@ -15,7 +15,6 @@ dest = str(args.destination)
 language = str(args.language).upper()
 
 index = Path("./Data/Sorted.json").read_text(encoding="utf-8")
-lab_src = glob(f"{source}/**/*.lab",recursive=True)
 data = json.loads(index)
 
 def get_path_by_lang(lang):
@@ -30,7 +29,7 @@ def get_path_by_lang(lang):
     return dest_path
 
 path_by_lang = get_path_by_lang(language);
-
+lab_src = glob(f"{source}/{path_by_lang}/**/*.lab",recursive=True)
 for lab_file in tqdm(lab_src):
     try:
         src_dir = os.path.dirname(lab_file)
