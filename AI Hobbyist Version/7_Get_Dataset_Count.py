@@ -38,19 +38,32 @@ def get_numbers(path):
 # 初始化统计字典
 stats = {
     "说话人": [],
-    "战斗语音": [],
-    "怪物语音": [],
-    "其它语音": [],
-    "带变量语音": [],
-    "多人对话": [],
-    "无标注语音数量": [],
-    "|": [],
     "无需处理语音数量": [],
     "无需处理标注数量": [],
     "无需处理语音时长": [],
     "总语音数量": [],
     "总标注数量": [],
-    "总语音时长": []  # 新增总语音时长列
+    "总语音时长": [],
+    "|": [],
+    "战斗语音数量": [],
+    "战斗语音标注数量": [],
+    "战斗语音总时长": [],
+    "怪物语音数量": [],
+    "怪物语音标注数量": [],
+    "怪物语音总时长": [],
+    "其它语音数量": [],
+    "其它语音标注数量": [],
+    "其它语音总时长": [],
+    "带变量语音数量": [],
+    "带变量语音标注数量": [],
+    "带变量语音总时长": [],
+    "多人对话语音数量": [],
+    "多人对话语音标注数量": [],
+    "多人对话语音总时长": []
+}
+
+stats_total = {
+    
 }
 
 # 遍历数据集文件夹
@@ -86,19 +99,29 @@ for dirs in tqdm(src,desc = "总进度", dynamic_ncols = True, leave = True):
     t_wavs = wavs + b_wavs + m_wavs + o_wavs + p_wavs + c_wavs
     t_labs = labs + b_labs + m_labs + o_labs + p_labs + c_labs
     t_durs = durs + b_durs + m_durs + o_durs + p_durs + c_durs
-    stats["战斗语音"].append(f"{b_wavs} | {b_labs} | {dur(b_durs)}")
-    stats["怪物语音"].append(f"{m_wavs} | {m_labs} | {dur(m_durs)}")
-    stats["其它语音"].append(f"{o_wavs} | {o_labs} | {dur(o_durs)}")
-    stats["带变量语音"].append(f"{p_wavs} | {p_labs} | {dur(p_durs)}")
-    stats["多人对话"].append(f"{c_wavs} | {c_labs} | {dur(c_durs)}")
-    stats["无标注语音数量"].append(t_wavs - t_labs)
-    stats["|"].append(f"")
+
     stats["无需处理语音数量"].append(wavs)
     stats["无需处理标注数量"].append(labs)
     stats["无需处理语音时长"].append(dur(durs))
     stats["总语音数量"].append(t_wavs)
     stats["总标注数量"].append(t_labs)
-    stats["总语音时长"].append(dur(t_durs))
+    stats["总语音时长"].append(dur(t_durs))   
+    stats["|"].append(f"|")
+    stats["战斗语音数量"].append(b_wavs)
+    stats["战斗语音标注数量"].append(b_labs)
+    stats["战斗语音总时长"].append(dur(b_durs))
+    stats["怪物语音数量"].append(m_wavs)
+    stats["怪物语音标注数量"].append(m_labs)
+    stats["怪物语音总时长"].append(dur(m_durs))
+    stats["其它语音数量"].append(o_wavs)
+    stats["其它语音标注数量"].append(o_labs)
+    stats["其它语音总时长"].append(dur(o_durs))
+    stats["带变量语音数量"].append(p_wavs)
+    stats["带变量语音标注数量"].append(p_labs)
+    stats["带变量语音总时长"].append(dur(p_durs))
+    stats["多人对话语音数量"].append(c_wavs)
+    stats["多人对话语音标注数量"].append(c_labs)
+    stats["多人对话语音总时长"].append(dur(c_durs))
     
 # 写入CSV文件
 csv_file = args.output_path
