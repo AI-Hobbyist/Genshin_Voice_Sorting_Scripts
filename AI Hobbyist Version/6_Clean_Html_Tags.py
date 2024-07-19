@@ -10,7 +10,7 @@ args = parser.parse_args()
 
 source = str(args.source)
 language = str(args.language)
-tags = r'[<>]'
+tags = r'[<>]|\\n'
 
 labfiles = glob(f"{source}/**/*.lab",recursive=True)
     
@@ -21,7 +21,7 @@ def check_content(text, regx):
         return False
     
 def tag_content(text):
-    res = re.findall(r'(<.*?>)', text)
+    res = re.findall(r'(<.*?>)|\n', text)
     string = '、'.join(res)
     return string
 
@@ -47,6 +47,7 @@ for file in tqdm(labfiles):
         src = f"{source}/{path_by_lang}/{spk}"
         if check_content(lab_content,tags):
             labels = re.sub(r'<.*?>', '', lab_content)
+            labels = labels.replace("\\n","")
             lab_path = f"{src}/{lab_file_name}"
             Path(lab_path).write_text(labels,encoding='utf-8')
             tqdm.write(f"已清除标注文件 {src}/{lab_file_name} 中的html标签：{tag_content(lab_content)}\n-----------")
